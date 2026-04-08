@@ -1,0 +1,254 @@
+// Version: 3.0.0
+type Address__227950649 =
+  {
+    city : Text;
+    line1 : Text;
+    line2 : Text;
+    pincode : Text;
+    state : Text;
+    tag : Text
+  };
+type Banner__163533885 =
+  {createdAt : Int; id : Nat; image : ExternalBlob__246066408; name : Text};
+type BlogId__546586685 = Nat;
+type BlogPost__72627970 =
+  {
+    author : Text;
+    category : Text;
+    content : Text;
+    coverImage : ?ExternalBlob__246066408;
+    createdAt : Int;
+    excerpt : Text;
+    id : BlogId__546586685;
+    slug : Text;
+    status : BlogStatus__202775276;
+    title : Text;
+    updatedAt : Int
+  };
+type BlogStatus__202775276 = {#draft; #published};
+type CustomerInfo__577488332 =
+  {
+    addressLine1 : Text;
+    addressLine2 : Text;
+    city : Text;
+    email : Text;
+    name : Text;
+    phone : Text;
+    pincode : Text;
+    state : Text
+  };
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type ExternalBlob__246066408 = Blob;
+type HttpHeader__778168237 = {name : Text; value : Text};
+type HttpRequestArgs__880505426 =
+  {
+    body : ?Blob;
+    headers : [HttpHeader__778168237];
+    is_replicated : ?Bool;
+    max_response_bytes : ?Nat64;
+    method : {#get; #head; #post};
+    transform :
+      ?{
+         context : Blob;
+         function :
+           shared query TransformArgs__245657692 ->
+             async HttpRequestResult__257036148
+       };
+    url : Text
+  };
+type HttpRequestResult__257036148 =
+  {body : Blob; headers : [HttpHeader__778168237]; status : Nat};
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type List__415060402<T> = List__790383201<T>;
+type List__790383201<T> =
+  {
+    var blockIndex : Nat__490723111;
+    var blocks : [var [var ?T]];
+    var elementIndex : Nat__490723111
+  };
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type OldBanner__820027267 =
+  {createdAt : Int; id : Nat; image : ExternalBlob__246066408; name : Text};
+type OldProduct__278484740 =
+  {
+    category : ProductCategory__528357766;
+    createdAt : Int;
+    description : Text;
+    id : Nat;
+    image1 : ?ExternalBlob__246066408;
+    image2 : ?ExternalBlob__246066408;
+    image3 : ?ExternalBlob__246066408;
+    image4 : ?ExternalBlob__246066408;
+    image5 : ?ExternalBlob__246066408;
+    image6 : ?ExternalBlob__246066408;
+    isBestseller : Bool;
+    isNew : Bool;
+    name : Text;
+    price : Nat;
+    status : ProductStatus__683791369;
+    stock : Nat
+  };
+type OrderItem__970180480 =
+  {name : Text; price : Nat; productId : Nat; quantity : Nat};
+type OrderStatus__591380551 = {#Cancelled; #Delivered; #Pending; #Shipped};
+type Order__720360493 =
+  {
+    codSurcharge : Nat;
+    createdAt : Int;
+    customer : CustomerInfo__577488332;
+    gstAmount : Nat;
+    id : Nat;
+    items : [OrderItem__970180480];
+    orderStatus : OrderStatus__591380551;
+    paymentMethod : PaymentMethod__731196174;
+    paymentStatus : PaymentStatus__747012114;
+    razorpayOrderId : ?Text;
+    subtotal : Nat;
+    totalAmount : Nat;
+    userId : ?Principal
+  };
+type PaymentMethod__731196174 = {#COD; #Razorpay};
+type PaymentStatus__747012114 = {#Failed; #Paid; #Pending; #Refunded};
+type ProductCategory__528357766 = {#Haircare; #Makeup; #Skincare};
+type ProductStatus__683791369 = {#active; #inactive};
+type Product__247116600 =
+  {
+    category : ProductCategory__528357766;
+    createdAt : Int;
+    description : Text;
+    id : Nat;
+    image1 : ?ExternalBlob__246066408;
+    image2 : ?ExternalBlob__246066408;
+    image3 : ?ExternalBlob__246066408;
+    image4 : ?ExternalBlob__246066408;
+    image5 : ?ExternalBlob__246066408;
+    image6 : ?ExternalBlob__246066408;
+    isBestseller : Bool;
+    isNew : Bool;
+    name : Text;
+    price : Nat;
+    status : ProductStatus__683791369;
+    stock : Nat
+  };
+type Review__1059295586 =
+  {
+    createdAt : Int;
+    id : Nat;
+    image1 : ?ExternalBlob__246066408;
+    image2 : ?ExternalBlob__246066408;
+    image3 : ?ExternalBlob__246066408;
+    productId : Nat;
+    rating : Nat;
+    text : Text;
+    userId : Principal
+  };
+type TransformArgs__245657692 =
+  {context : Blob; response : HttpRequestResult__257036148};
+type UserProfile__1009003526 =
+  {addresses : [Address__227950649]; email : Text; name : Text; phone : Text};
+type UserRole__1054455867 = {#admin; #guest; #user};
+actor ({
+  stable IC :
+    actor {
+      http_request :
+        shared HttpRequestArgs__880505426 ->
+          async HttpRequestResult__257036148
+    };
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__605269027<Principal, UserRole__1054455867>
+    };
+  in banners : List__415060402<OldBanner__820027267>;
+  stable blogPosts :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?BlogPost__72627970]];
+      var elementIndex : Nat__490723111
+    };
+  in nextBannerId : {var value : Nat};
+  stable nextBlogPostId : {var value : Nat};
+  stable nextOrderId : {var value : Nat};
+  in nextProductId : {var value : Nat};
+  stable nextReviewId : {var value : Nat};
+  stable orders :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Order__720360493]];
+      var elementIndex : Nat__490723111
+    };
+  in products : List__415060402<OldProduct__278484740>;
+  stable reviews :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Review__1059295586]];
+      var elementIndex : Nat__490723111
+    };
+  stable userProfiles :
+    {
+      var root : Node__46230540<Principal, UserProfile__1009003526>;
+      var size : Nat__490723111
+    }
+}, {
+  stable IC :
+    actor {
+      http_request :
+        shared HttpRequestArgs__880505426 ->
+          async HttpRequestResult__257036148
+    };
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__605269027<Principal, UserRole__1054455867>
+    };
+  stable banners :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Banner__163533885]];
+      var elementIndex : Nat__490723111
+    };
+  stable blogPosts :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?BlogPost__72627970]];
+      var elementIndex : Nat__490723111
+    };
+  stable nextBannerId : {var value : Nat};
+  stable nextBlogPostId : {var value : Nat};
+  stable nextOrderId : {var value : Nat};
+  stable nextProductId : {var value : Nat};
+  stable nextReviewId : {var value : Nat};
+  stable orders :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Order__720360493]];
+      var elementIndex : Nat__490723111
+    };
+  stable products :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Product__247116600]];
+      var elementIndex : Nat__490723111
+    };
+  stable reviews :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Review__1059295586]];
+      var elementIndex : Nat__490723111
+    };
+  stable userProfiles :
+    {
+      var root : Node__46230540<Principal, UserProfile__1009003526>;
+      var size : Nat__490723111
+    }
+}) ;

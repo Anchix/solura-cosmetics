@@ -1,0 +1,308 @@
+type _ImmutableObjectStorageRefillResult = 
+ record {
+   success: opt bool;
+   topped_up_amount: opt nat;
+ };
+type _ImmutableObjectStorageRefillInformation = record {
+                                                  proposed_top_up_amount:
+                                                   opt nat;};
+type _ImmutableObjectStorageCreateCertificateResult = 
+ record {
+   blob_hash: text;
+   method: text;
+ };
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type UserProfile = 
+ record {
+   addresses: vec Address;
+   email: text;
+   name: text;
+   phone: text;
+ };
+type ReviewInput = 
+ record {
+   image1: opt ExternalBlob;
+   image2: opt ExternalBlob;
+   image3: opt ExternalBlob;
+   productId: nat;
+   rating: nat;
+   "text": text;
+ };
+type ReviewId = nat;
+type Review = 
+ record {
+   createdAt: int;
+   id: nat;
+   image1: opt ExternalBlob;
+   image2: opt ExternalBlob;
+   image3: opt ExternalBlob;
+   productId: nat;
+   rating: nat;
+   "text": text;
+   userId: principal;
+ };
+type ProductStatus = 
+ variant {
+   active;
+   inactive;
+ };
+type ProductRating = 
+ record {
+   averageRating: nat;
+   productId: nat;
+   reviewCount: nat;
+ };
+type ProductInput = 
+ record {
+   category: ProductCategory;
+   description: text;
+   image1: opt ExternalBlob;
+   image2: opt ExternalBlob;
+   image3: opt ExternalBlob;
+   image4: opt ExternalBlob;
+   image5: opt ExternalBlob;
+   image6: opt ExternalBlob;
+   isBestseller: bool;
+   isNew: bool;
+   name: text;
+   price: nat;
+   status: ProductStatus;
+   stock: nat;
+ };
+type ProductId = nat;
+type ProductCategory = 
+ variant {
+   Haircare;
+   Makeup;
+   Skincare;
+ };
+type Product = 
+ record {
+   category: ProductCategory;
+   createdAt: int;
+   description: text;
+   id: nat;
+   image1: opt ExternalBlob;
+   image2: opt ExternalBlob;
+   image3: opt ExternalBlob;
+   image4: opt ExternalBlob;
+   image5: opt ExternalBlob;
+   image6: opt ExternalBlob;
+   isBestseller: bool;
+   isNew: bool;
+   name: text;
+   price: nat;
+   status: ProductStatus;
+   stock: nat;
+ };
+type PaymentStatus = 
+ variant {
+   Failed;
+   Paid;
+   Pending;
+   Refunded;
+ };
+type PaymentMethod = 
+ variant {
+   COD;
+   Razorpay;
+ };
+type OrderStatus = 
+ variant {
+   Cancelled;
+   Delivered;
+   Pending;
+   Shipped;
+ };
+type OrderItem = 
+ record {
+   name: text;
+   price: nat;
+   productId: nat;
+   quantity: nat;
+ };
+type OrderInput = 
+ record {
+   customer: CustomerInfo;
+   items: vec OrderItem;
+   paymentMethod: PaymentMethod;
+   razorpayOrderId: opt text;
+ };
+type OrderId = nat;
+type Order = 
+ record {
+   codSurcharge: nat;
+   createdAt: int;
+   customer: CustomerInfo;
+   gstAmount: nat;
+   id: nat;
+   items: vec OrderItem;
+   orderStatus: OrderStatus;
+   paymentMethod: PaymentMethod;
+   paymentStatus: PaymentStatus;
+   razorpayOrderId: opt text;
+   subtotal: nat;
+   totalAmount: nat;
+   userId: opt principal;
+ };
+type InvoiceData = 
+ record {
+   codSurcharge: nat;
+   companyAddress: text;
+   companyName: text;
+   customer: CustomerInfo;
+   gstAmount: nat;
+   gstNumber: text;
+   items: vec OrderItem;
+   orderDate: int;
+   orderId: nat;
+   paymentMethod: PaymentMethod;
+   paymentStatus: PaymentStatus;
+   subtotal: nat;
+   totalAmount: nat;
+ };
+type ExternalBlob = blob;
+type DailyAnalytics = 
+ record {
+   date: int;
+   orderCount: nat;
+   revenue: nat;
+ };
+type CustomerInfo = 
+ record {
+   addressLine1: text;
+   addressLine2: text;
+   city: text;
+   email: text;
+   name: text;
+   phone: text;
+   pincode: text;
+   state: text;
+ };
+type BlogStatus = 
+ variant {
+   draft;
+   published;
+ };
+type BlogPost = 
+ record {
+   author: text;
+   category: text;
+   content: text;
+   coverImage: opt ExternalBlob;
+   createdAt: int;
+   excerpt: text;
+   id: BlogId;
+   slug: text;
+   status: BlogStatus;
+   title: text;
+   updatedAt: int;
+ };
+type BlogInput = 
+ record {
+   author: text;
+   category: text;
+   content: text;
+   coverImage: opt ExternalBlob;
+   excerpt: text;
+   slug: text;
+   status: BlogStatus;
+   title: text;
+ };
+type BlogId = nat;
+type Banner = 
+ record {
+   createdAt: int;
+   id: nat;
+   image: ExternalBlob;
+   name: text;
+ };
+type Address = 
+ record {
+   city: text;
+   line1: text;
+   line2: text;
+   pincode: text;
+   state: text;
+   tag: text;
+ };
+service : {
+  _immutableObjectStorageBlobsAreLive: (hashes: vec blob) -> (vec bool) query;
+  _immutableObjectStorageBlobsToDelete: () -> (vec blob) query;
+  _immutableObjectStorageConfirmBlobDeletion: (blobs: vec blob) -> ();
+  _immutableObjectStorageCreateCertificate: (blobHash: text) ->
+   (_ImmutableObjectStorageCreateCertificateResult);
+  _immutableObjectStorageRefillCashier: (refillInformation:
+   opt _ImmutableObjectStorageRefillInformation) ->
+   (_ImmutableObjectStorageRefillResult);
+  _immutableObjectStorageUpdateGatewayPrincipals: () -> ();
+  _initializeAccessControl: () -> ();
+  addAddress: (address: Address) -> (bool);
+  adminAddBanner: (name: text, image: ExternalBlob) -> (Banner);
+  adminCreateBlogPost: (input: BlogInput) -> (BlogPost);
+  adminCreateProduct: (input: ProductInput) -> (Product);
+  adminDeleteBanner: (id: nat) -> (bool);
+  adminDeleteBlogPost: (id: BlogId) -> (bool);
+  adminDeleteProduct: (id: ProductId) -> (bool);
+  adminGetAnalytics: () -> (vec DailyAnalytics) query;
+  adminListAllBlogPosts: () -> (vec BlogPost);
+  adminListAllOrders: () -> (vec Order) query;
+  adminUpdateBlogPost: (id: BlogId, input: BlogInput) -> (opt BlogPost);
+  adminUpdateOrderStatus: (id: OrderId, status: OrderStatus) -> (bool);
+  adminUpdateProduct: (id: ProductId, input: ProductInput) -> (bool);
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  chatbotQuery: (userMessage: text) -> (text);
+  createOrder: (input: OrderInput) -> (Order);
+  createReview: (input: ReviewInput) -> (Review);
+  deleteReview: (reviewId: ReviewId) -> (bool);
+  getBestsellers: () -> (vec Product) query;
+  getBlogPost: (id: BlogId) -> (opt BlogPost) query;
+  getBlogPostBySlug: (slug: text) -> (opt BlogPost) query;
+  getCallerUserProfile: () -> (opt UserProfile) query;
+  getCallerUserRole: () -> (UserRole) query;
+  getInvoice: (id: OrderId) -> (opt InvoiceData) query;
+  getNewArrivals: () -> (vec Product) query;
+  getOrder: (id: OrderId) -> (opt Order) query;
+  getProduct: (id: ProductId) -> (opt Product) query;
+  getProductRating: (productId: ProductId) -> (ProductRating) query;
+  getProductsByCategory: (category: ProductCategory) -> (vec Product) query;
+  getUserProfile: (user: principal) -> (opt UserProfile) query;
+  isCallerAdmin: () -> (bool) query;
+  listActiveProducts: () -> (vec Product) query;
+  listBanners: () -> (vec Banner) query;
+  listBlogPosts: () -> (vec BlogPost) query;
+  listMyOrders: () -> (vec Order) query;
+  listProducts: () -> (vec Product) query;
+  listReviewsByProduct: (productId: ProductId) -> (vec Review) query;
+  lookupPincode: (pincode: text) -> (text);
+  removeAddress: (index: nat) -> (bool);
+  saveCallerUserProfile: (profile: UserProfile) -> ();
+  transform: (input:
+   record {
+     context: blob;
+     response:
+      record {
+        body: blob;
+        headers: vec record {
+                       name: text;
+                       value: text;
+                     };
+        status: nat;
+      };
+   }) ->
+   (record {
+      body: blob;
+      headers: vec record {
+                     name: text;
+                     value: text;
+                   };
+      status: nat;
+    }) query;
+  updatePaymentStatus: (id: OrderId, status: PaymentStatus, razorpayOrderId:
+   opt text) -> (bool);
+}

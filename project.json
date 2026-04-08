@@ -1,0 +1,24 @@
+{
+  "overview": "Solura Cosmetics is a full-stack e-commerce store for beauty and skincare products, targeting the Indian market. Features include product browsing, cart, checkout with Razorpay and COD, an admin panel for managing products, orders, and blog content, and a customer blog for beauty tips and news.",
+  "features": [
+    "Product catalog with 6-image galleries and category filtering",
+    "Blog with admin management and public reading pages",
+    "Secure admin panel for products, orders, banners, and blog posts",
+    "Razorpay online payments and Cash on Delivery with ₹40 surcharge",
+    "GST invoice generation post-payment",
+    "SEO-optimized for Indian market with structured data and local business schema",
+    "AI chatbot for customer support"
+  ],
+  "category": "e-commerce",
+  "tags": [
+    "cosmetics",
+    "beauty",
+    "e-commerce",
+    "india",
+    "skincare",
+    "blog",
+    "admin-panel",
+    "razorpay"
+  ],
+  "last_updated": "2026-04-08T19:07:21.195Z"
+}
