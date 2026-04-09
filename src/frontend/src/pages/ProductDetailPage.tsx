@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  MOCK_PRODUCTS,
   useProduct,
   useProductReviews,
+  useProducts,
   useSubmitReview,
 } from "@/hooks/useProducts";
 import { useAuthStore } from "@/store/authStore";
@@ -577,6 +577,7 @@ export default function ProductDetailPage() {
 
   const { data: product, isLoading } = useProduct(productId);
   const { data: reviews = [] } = useProductReviews(product?.id ?? "");
+  const { data: allProducts = [] } = useProducts(product?.category);
   const addItem = useCartStore((s) => s.addItem);
   const { isLoggedIn } = useAuthStore();
 
@@ -584,9 +585,9 @@ export default function ProductDetailPage() {
   const [selectedVariant, setSelectedVariant] = useState<string | undefined>();
   const [showReviewForm, setShowReviewForm] = useState(false);
 
-  const relatedProducts = MOCK_PRODUCTS.filter(
-    (p) => p.category === product?.category && p.id !== product?.id,
-  ).slice(0, 4);
+  const relatedProducts = allProducts
+    .filter((p) => p.id !== product?.id)
+    .slice(0, 4);
 
   const handleAddToCart = () => {
     if (!product) return;

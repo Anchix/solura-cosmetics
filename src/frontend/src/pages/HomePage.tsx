@@ -149,18 +149,18 @@ function HeroSection() {
               {/* Floating product snippet */}
               <div className="absolute -bottom-4 -left-4 sm:-bottom-6 sm:-left-6 bg-card rounded-xl shadow-elevated p-3 flex items-center gap-3 border border-border max-w-[220px]">
                 <img
-                  src="/assets/generated/product-serum.dim_500x600.jpg"
-                  alt="Kumkumadi Radiance Serum"
+                  src="/assets/images/img-20260316-wa0004-019d71db-72fb-75fa-b051-70700f8c04a9.jpg"
+                  alt="Solura Whitening Cream"
                   className="w-12 h-14 object-cover rounded-lg shrink-0"
                   loading="lazy"
                 />
                 <div className="min-w-0">
                   <p className="font-display text-sm font-semibold text-foreground line-clamp-1">
-                    Kumkumadi Serum
+                    Solura Whitening Cream
                   </p>
                   <StarRating rating={4.8} size="sm" className="my-0.5" />
                   <p className="font-body text-sm font-bold text-primary">
-                    ₹1,299
+                    ₹499
                   </p>
                 </div>
               </div>
@@ -186,6 +186,9 @@ function HeroSection() {
                 </div>
               </div>
             </div>
+            <p className="mt-8 text-center text-xs italic text-muted-foreground/70">
+              ✏️ Product shown, images &amp; price are managed by the admin panel
+            </p>
           </div>
         </div>
       </div>
@@ -548,7 +551,7 @@ const TESTIMONIALS = [
     location: "Chennai, Tamil Nadu",
     rating: 5,
     quote:
-      "The Kumkumadi Serum has genuinely transformed my skin. Three weeks in and my dark spots have faded significantly. My friends keep asking what I'm doing differently!",
+      "The Solura Whitening Cream has genuinely transformed my skin. Three weeks in and my dark spots have faded significantly. My friends keep asking what I'm doing differently!",
     avatar: "PK",
   },
   {

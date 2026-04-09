@@ -25,12 +25,12 @@ export interface Product {
     category: ProductCategory;
     isNew: boolean;
     price: bigint;
-    image1?: ExternalBlob;
-    image2?: ExternalBlob;
-    image3?: ExternalBlob;
-    image4?: ExternalBlob;
-    image5?: ExternalBlob;
-    image6?: ExternalBlob;
+    image1?: string;
+    image2?: string;
+    image3?: string;
+    image4?: string;
+    image5?: string;
+    image6?: string;
 }
 export interface Address {
     tag: string;
@@ -47,6 +47,7 @@ export interface OrderItem {
     price: bigint;
 }
 export interface OrderInput {
+    couponCode?: string;
     paymentMethod: PaymentMethod;
     customer: CustomerInfo;
     razorpayOrderId?: string;
@@ -66,11 +67,13 @@ export interface Review {
     image3?: ExternalBlob;
 }
 export interface InvoiceData {
+    couponCode?: string;
     paymentStatus: PaymentStatus;
     paymentMethod: PaymentMethod;
     codSurcharge: bigint;
     customer: CustomerInfo;
     gstNumber: string;
+    discountAmount: bigint;
     orderDate: bigint;
     gstAmount: bigint;
     orderId: bigint;
@@ -89,12 +92,12 @@ export interface ProductInput {
     category: ProductCategory;
     isNew: boolean;
     price: bigint;
-    image1?: ExternalBlob;
-    image2?: ExternalBlob;
-    image3?: ExternalBlob;
-    image4?: ExternalBlob;
-    image5?: ExternalBlob;
-    image6?: ExternalBlob;
+    image1?: string;
+    image2?: string;
+    image3?: string;
+    image4?: string;
+    image5?: string;
+    image6?: string;
 }
 export interface BlogPost {
     id: BlogId;
@@ -104,19 +107,43 @@ export interface BlogPost {
     createdAt: bigint;
     slug: string;
     author: string;
-    coverImage?: ExternalBlob;
+    coverImage?: string;
     updatedAt: bigint;
     excerpt: string;
     category: string;
 }
+export interface Coupon {
+    id: bigint;
+    discountValue: bigint;
+    expiryDate?: bigint;
+    code: string;
+    createdAt: bigint;
+    discountType: DiscountType;
+    usedCount: bigint;
+    isActive: boolean;
+    minOrderAmount?: bigint;
+    maxUses?: bigint;
+}
+export type CouponValidationResult = {
+    __kind__: "Invalid";
+    Invalid: string;
+} | {
+    __kind__: "Valid";
+    Valid: {
+        discountAmount: bigint;
+        coupon: Coupon;
+    };
+};
 export interface Order {
     id: bigint;
+    couponCode?: string;
     paymentStatus: PaymentStatus;
     paymentMethod: PaymentMethod;
     codSurcharge: bigint;
     customer: CustomerInfo;
     orderStatus: OrderStatus;
     userId?: Principal;
+    discountAmount: bigint;
     createdAt: bigint;
     gstAmount: bigint;
     razorpayOrderId?: string;
@@ -133,7 +160,7 @@ export interface Banner {
     id: bigint;
     name: string;
     createdAt: bigint;
-    image: ExternalBlob;
+    imageUrl: string;
 }
 export interface BlogInput {
     status: BlogStatus;
@@ -141,7 +168,7 @@ export interface BlogInput {
     content: string;
     slug: string;
     author: string;
-    coverImage?: ExternalBlob;
+    coverImage?: string;
     excerpt: string;
     category: string;
 }
@@ -149,6 +176,15 @@ export interface DailyAnalytics {
     revenue: bigint;
     date: bigint;
     orderCount: bigint;
+}
+export interface CouponInput {
+    discountValue: bigint;
+    expiryDate?: bigint;
+    code: string;
+    discountType: DiscountType;
+    isActive: boolean;
+    minOrderAmount?: bigint;
+    maxUses?: bigint;
 }
 export interface CustomerInfo {
     city: string;
@@ -179,6 +215,10 @@ export type OrderId = bigint;
 export enum BlogStatus {
     published = "published",
     draft = "draft"
+}
+export enum DiscountType {
+    Fixed = "Fixed",
+    Percentage = "Percentage"
 }
 export enum OrderStatus {
     Delivered = "Delivered",
@@ -212,18 +252,127 @@ export enum UserRole {
 }
 export interface backendInterface {
     addAddress(address: Address): Promise<boolean>;
-    adminAddBanner(name: string, image: ExternalBlob): Promise<Banner>;
-    adminCreateBlogPost(input: BlogInput): Promise<BlogPost>;
-    adminCreateProduct(input: ProductInput): Promise<Product>;
-    adminDeleteBanner(id: bigint): Promise<boolean>;
-    adminDeleteBlogPost(id: BlogId): Promise<boolean>;
-    adminDeleteProduct(id: ProductId): Promise<boolean>;
-    adminGetAnalytics(): Promise<Array<DailyAnalytics>>;
-    adminListAllBlogPosts(): Promise<Array<BlogPost>>;
-    adminListAllOrders(): Promise<Array<Order>>;
-    adminUpdateBlogPost(id: BlogId, input: BlogInput): Promise<BlogPost | null>;
-    adminUpdateOrderStatus(id: OrderId, status: OrderStatus): Promise<boolean>;
-    adminUpdateProduct(id: ProductId, input: ProductInput): Promise<boolean>;
+    adminAddBanner(token: string, name: string, imageUrl: string): Promise<{
+        __kind__: "ok";
+        ok: Banner;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    adminCreateBlogPost(token: string, input: BlogInput): Promise<{
+        __kind__: "ok";
+        ok: BlogPost;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    adminCreateCoupon(token: string, input: CouponInput): Promise<{
+        __kind__: "ok";
+        ok: Coupon;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    adminCreateProduct(token: string, input: ProductInput): Promise<{
+        __kind__: "ok";
+        ok: Product;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    adminDeleteBanner(token: string, id: bigint): Promise<{
+        __kind__: "ok";
+        ok: boolean;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    adminDeleteBlogPost(token: string, id: BlogId): Promise<{
+        __kind__: "ok";
+        ok: boolean;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    adminDeleteCoupon(token: string, id: bigint): Promise<{
+        __kind__: "ok";
+        ok: boolean;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    adminDeleteProduct(token: string, id: ProductId): Promise<{
+        __kind__: "ok";
+        ok: boolean;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    adminGetAnalytics(token: string): Promise<{
+        __kind__: "ok";
+        ok: Array<DailyAnalytics>;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    adminListAllBlogPosts(token: string): Promise<{
+        __kind__: "ok";
+        ok: Array<BlogPost>;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    adminListAllOrders(token: string): Promise<{
+        __kind__: "ok";
+        ok: Array<Order>;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    adminListCoupons(token: string): Promise<{
+        __kind__: "ok";
+        ok: Array<Coupon>;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    adminLogin(password: string): Promise<{
+        __kind__: "ok";
+        ok: string;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    adminLogout(token: string): Promise<void>;
+    adminUpdateBlogPost(token: string, id: BlogId, input: BlogInput): Promise<{
+        __kind__: "ok";
+        ok: BlogPost | null;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    adminUpdateCoupon(token: string, id: bigint, input: CouponInput): Promise<{
+        __kind__: "ok";
+        ok: boolean;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    adminUpdateOrderStatus(token: string, id: OrderId, status: OrderStatus): Promise<{
+        __kind__: "ok";
+        ok: boolean;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    adminUpdateProduct(token: string, id: ProductId, input: ProductInput): Promise<{
+        __kind__: "ok";
+        ok: boolean;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    adminVerifyToken(token: string): Promise<boolean>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     chatbotQuery(userMessage: string): Promise<string>;
     createOrder(input: OrderInput): Promise<Order>;
@@ -270,4 +419,5 @@ export interface backendInterface {
         }>;
     }>;
     updatePaymentStatus(id: OrderId, status: PaymentStatus, razorpayOrderId: string | null): Promise<boolean>;
+    validateCoupon(code: string, cartTotal: bigint): Promise<CouponValidationResult>;
 }

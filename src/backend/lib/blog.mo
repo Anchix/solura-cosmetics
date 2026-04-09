@@ -1,51 +1,103 @@
 import List "mo:core/List";
-import Runtime "mo:core/Runtime";
 import BlogTypes "../types/blog";
 
 module {
   public func createPost(
-    _posts : List.List<BlogTypes.BlogPost>,
-    _nextId : Nat,
-    _input : BlogTypes.BlogInput,
-    _now : Int,
+    posts : List.List<BlogTypes.BlogPost>,
+    nextId : Nat,
+    input : BlogTypes.BlogInput,
+    now : Int,
   ) : BlogTypes.BlogPost {
-    Runtime.trap("not implemented");
+    let post : BlogTypes.BlogPost = {
+      id = nextId;
+      title = input.title;
+      content = input.content;
+      excerpt = input.excerpt;
+      author = input.author;
+      category = input.category;
+      coverImage = input.coverImage;
+      status = input.status;
+      slug = input.slug;
+      createdAt = now;
+      updatedAt = now;
+    };
+    posts.add(post);
+    post
   };
 
   public func updatePost(
-    _posts : List.List<BlogTypes.BlogPost>,
-    _id : BlogTypes.BlogId,
-    _input : BlogTypes.BlogInput,
-    _now : Int,
+    posts : List.List<BlogTypes.BlogPost>,
+    id : BlogTypes.BlogId,
+    input : BlogTypes.BlogInput,
+    now : Int,
   ) : ?BlogTypes.BlogPost {
-    Runtime.trap("not implemented");
+    let existing = posts.find(func(p) { p.id == id });
+    switch (existing) {
+      case null { null };
+      case (?_) {
+        var updated : ?BlogTypes.BlogPost = null;
+        posts.mapInPlace(func(p) {
+          if (p.id == id) {
+            let u : BlogTypes.BlogPost = {
+              p with
+              title = input.title;
+              content = input.content;
+              excerpt = input.excerpt;
+              author = input.author;
+              category = input.category;
+              coverImage = input.coverImage;
+              status = input.status;
+              slug = input.slug;
+              updatedAt = now;
+            };
+            updated := ?u;
+            u
+          } else { p }
+        });
+        updated
+      };
+    };
   };
 
   public func deletePost(
-    _posts : List.List<BlogTypes.BlogPost>,
-    _id : BlogTypes.BlogId,
+    posts : List.List<BlogTypes.BlogPost>,
+    id : BlogTypes.BlogId,
   ) : Bool {
-    Runtime.trap("not implemented");
+    let existing = posts.find(func(p) { p.id == id });
+    switch (existing) {
+      case null { false };
+      case (?_) {
+        let filtered = posts.filter(func(p) { p.id != id });
+        posts.clear();
+        posts.append(filtered);
+        true
+      };
+    };
   };
 
   public func getPost(
-    _posts : List.List<BlogTypes.BlogPost>,
-    _id : BlogTypes.BlogId,
+    posts : List.List<BlogTypes.BlogPost>,
+    id : BlogTypes.BlogId,
   ) : ?BlogTypes.BlogPost {
-    Runtime.trap("not implemented");
+    posts.find(func(p) { p.id == id });
   };
 
   public func getPostBySlug(
-    _posts : List.List<BlogTypes.BlogPost>,
-    _slug : Text,
+    posts : List.List<BlogTypes.BlogPost>,
+    slug : Text,
   ) : ?BlogTypes.BlogPost {
-    Runtime.trap("not implemented");
+    posts.find(func(p) { p.slug == slug });
   };
 
   public func listPosts(
-    _posts : List.List<BlogTypes.BlogPost>,
-    _statusFilter : ?BlogTypes.BlogStatus,
+    posts : List.List<BlogTypes.BlogPost>,
+    statusFilter : ?BlogTypes.BlogStatus,
   ) : [BlogTypes.BlogPost] {
-    Runtime.trap("not implemented");
+    switch (statusFilter) {
+      case null { posts.toArray() };
+      case (?s) {
+        posts.filter(func(p) { p.status == s }).toArray()
+      };
+    };
   };
 };

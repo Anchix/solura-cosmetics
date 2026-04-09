@@ -2,7 +2,7 @@ import Layout from "@/components/Layout";
 import { ProductGridSkeleton } from "@/components/LoadingSkeleton";
 import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
-import { MOCK_PRODUCTS, useProducts } from "@/hooks/useProducts";
+import { useProducts } from "@/hooks/useProducts";
 import type { ProductCategory } from "@/types";
 import { Link, useParams } from "@tanstack/react-router";
 import { ChevronRight, Droplets, Leaf, Sparkles, Wind } from "lucide-react";
@@ -81,12 +81,12 @@ export default function CategoryPage() {
   const { data: products, isLoading } = useProducts(catKey);
 
   const categoryProducts = useMemo(() => {
-    const list = products ?? MOCK_PRODUCTS.filter((p) => p.category === catKey);
+    const list = products ?? [];
     return [...list].sort((a, b) => {
       if (a.isBestseller !== b.isBestseller) return a.isBestseller ? -1 : 1;
       return b.createdAt.localeCompare(a.createdAt);
     });
-  }, [products, catKey]);
+  }, [products]);
 
   const bestsellers = categoryProducts.filter((p) => p.isBestseller);
   const newArrivals = categoryProducts.filter(

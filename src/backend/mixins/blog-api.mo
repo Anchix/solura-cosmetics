@@ -1,40 +1,59 @@
 import List "mo:core/List";
-import Runtime "mo:core/Runtime";
 import Time "mo:core/Time";
-import AccessControl "mo:caffeineai-authorization/access-control";
 import BlogTypes "../types/blog";
 import BlogLib "../lib/blog";
 
 mixin (
-  accessControlState : AccessControl.AccessControlState,
+  adminSession : { var token : ?Text },
   blogPosts : List.List<BlogTypes.BlogPost>,
   nextBlogPostId : { var value : Nat },
 ) {
+  private func verifyBlogAdminToken(token : Text) : Bool {
+    switch (adminSession.token) {
+      case (?t) { t == token };
+      case null { false };
+    };
+  };
+
   public query func listBlogPosts() : async [BlogTypes.BlogPost] {
-    Runtime.trap("not implemented");
+    BlogLib.listPosts(blogPosts, ?#published);
   };
 
   public query func getBlogPost(id : BlogTypes.BlogId) : async ?BlogTypes.BlogPost {
-    Runtime.trap("not implemented");
+    BlogLib.getPost(blogPosts, id);
   };
 
   public query func getBlogPostBySlug(slug : Text) : async ?BlogTypes.BlogPost {
-    Runtime.trap("not implemented");
+    BlogLib.getPostBySlug(blogPosts, slug);
   };
 
-  public shared ({ caller }) func adminCreateBlogPost(input : BlogTypes.BlogInput) : async BlogTypes.BlogPost {
-    Runtime.trap("not implemented");
+  public func adminCreateBlogPost(token : Text, input : BlogTypes.BlogInput) : async { #ok : BlogTypes.BlogPost; #err : Text } {
+    if (not verifyBlogAdminToken(token)) {
+      return #err("Unauthorized: Invalid or expired admin session");
+    };
+    let id = nextBlogPostId.value;
+    nextBlogPostId.value += 1;
+    #ok(BlogLib.createPost(blogPosts, id, input, Time.now()))
   };
 
-  public shared ({ caller }) func adminUpdateBlogPost(id : BlogTypes.BlogId, input : BlogTypes.BlogInput) : async ?BlogTypes.BlogPost {
-    Runtime.trap("not implemented");
+  public func adminUpdateBlogPost(token : Text, id : BlogTypes.BlogId, input : BlogTypes.BlogInput) : async { #ok : ?BlogTypes.BlogPost; #err : Text } {
+    if (not verifyBlogAdminToken(token)) {
+      return #err("Unauthorized: Invalid or expired admin session");
+    };
+    #ok(BlogLib.updatePost(blogPosts, id, input, Time.now()))
   };
 
-  public shared ({ caller }) func adminDeleteBlogPost(id : BlogTypes.BlogId) : async Bool {
-    Runtime.trap("not implemented");
+  public func adminDeleteBlogPost(token : Text, id : BlogTypes.BlogId) : async { #ok : Bool; #err : Text } {
+    if (not verifyBlogAdminToken(token)) {
+      return #err("Unauthorized: Invalid or expired admin session");
+    };
+    #ok(BlogLib.deletePost(blogPosts, id))
   };
 
-  public shared ({ caller }) func adminListAllBlogPosts() : async [BlogTypes.BlogPost] {
-    Runtime.trap("not implemented");
+  public func adminListAllBlogPosts(token : Text) : async { #ok : [BlogTypes.BlogPost]; #err : Text } {
+    if (not verifyBlogAdminToken(token)) {
+      return #err("Unauthorized: Invalid or expired admin session");
+    };
+    #ok(BlogLib.listPosts(blogPosts, null))
   };
 };

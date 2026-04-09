@@ -1,321 +1,325 @@
-import type { Product, ProductCategory, Review } from "@/types";
+import {
+  ProductCategory as BackendProductCategory,
+  ProductStatus,
+} from "@/backend";
+import type {
+  Product as BackendProduct,
+  ProductInput as BackendProductInput,
+} from "@/backend";
+import { useSharedActor } from "@/context/ActorContext";
+import { useAuthStore } from "@/store/authStore";
+import type { Product, ProductCategory } from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-// ─── Mock data for demo (backend not yet wired) ──────────────────────────────
+// ─── Data mapping ─────────────────────────────────────────────────────────────
 
-export const MOCK_PRODUCTS: Product[] = [
-  {
-    id: "p1",
-    name: "Kumkumadi Radiance Serum",
-    slug: "kumkumadi-radiance-serum",
-    category: "skincare",
-    price: 1299,
-    originalPrice: 1599,
-    description:
-      "Ancient Ayurvedic formulation enriched with saffron, sandalwood, and 16 rare herbs. Brightens complexion, reduces dark spots, and delivers a radiant glow.",
-    shortDescription: "Saffron & 16-herb brightening serum",
-    images: [
-      "/assets/generated/product-serum.dim_500x600.jpg",
-      "/assets/generated/hero-product.dim_600x700.jpg",
-      "/assets/generated/product-serum.dim_500x600.jpg",
-      "/assets/generated/product-serum.dim_500x600.jpg",
-      "/assets/generated/product-serum.dim_500x600.jpg",
-    ],
-    rating: 4.8,
-    reviewCount: 234,
-    inStock: true,
-    stock: 48,
-    isBestseller: true,
-    isNew: false,
-    isLowStock: false,
-    tags: ["brightening", "ayurvedic", "saffron", "anti-aging"],
-    ingredients:
-      "Kumkuma (Saffron), Chandana (Sandalwood), Manjishtha, Lotus, Sesame Oil",
-    howToUse:
-      "Apply 3-4 drops to cleansed face. Massage gently in upward circular motions. Use morning and night.",
-    createdAt: "2024-01-15",
-    updatedAt: "2024-03-10",
-  },
-  {
-    id: "p2",
-    name: "Silk Sensation Lipstick",
-    slug: "silk-sensation-lipstick",
-    category: "makeup",
-    price: 549,
-    originalPrice: 699,
-    description:
-      "Intensely pigmented, long-wearing lipstick with a velvety matte finish. Enriched with argan oil and vitamin E for moisturized, supple lips all day.",
-    shortDescription: "Velvety matte, 12-hour wear",
-    images: [
-      "/assets/generated/product-lipstick.dim_500x600.jpg",
-      "/assets/generated/product-lipstick.dim_500x600.jpg",
-      "/assets/generated/product-lipstick.dim_500x600.jpg",
-      "/assets/generated/product-lipstick.dim_500x600.jpg",
-      "/assets/generated/product-lipstick.dim_500x600.jpg",
-    ],
-    rating: 4.6,
-    reviewCount: 189,
-    inStock: true,
-    stock: 120,
-    isBestseller: true,
-    isNew: false,
-    isLowStock: false,
-    tags: ["matte", "long-wearing", "argan oil"],
-    variants: [
-      {
-        id: "v1",
-        name: "Shade",
-        value: "Rose Blush",
-        priceModifier: 0,
-        stock: 40,
-      },
-      {
-        id: "v2",
-        name: "Shade",
-        value: "Berry Plum",
-        priceModifier: 0,
-        stock: 35,
-      },
-      {
-        id: "v3",
-        name: "Shade",
-        value: "Coral Crush",
-        priceModifier: 0,
-        stock: 45,
-      },
-    ],
-    createdAt: "2024-02-01",
-    updatedAt: "2024-03-12",
-  },
-  {
-    id: "p3",
-    name: "Ayurvedic Hair Vitalizer",
-    slug: "ayurvedic-hair-vitalizer",
-    category: "haircare",
-    price: 849,
-    originalPrice: 999,
-    description:
-      "Powered by Bhringraj, Amla, and Brahmi. Stimulates hair growth, reduces breakage, and adds deep shine. Suitable for all hair types.",
-    shortDescription: "Bhringraj & Amla growth oil",
-    images: [
-      "/assets/generated/product-hair.dim_500x600.jpg",
-      "/assets/generated/product-hair.dim_500x600.jpg",
-      "/assets/generated/product-hair.dim_500x600.jpg",
-      "/assets/generated/product-hair.dim_500x600.jpg",
-      "/assets/generated/product-hair.dim_500x600.jpg",
-    ],
-    rating: 4.7,
-    reviewCount: 312,
-    inStock: true,
-    stock: 8,
-    isBestseller: true,
-    isNew: false,
-    isLowStock: true,
-    tags: ["hair-growth", "ayurvedic", "bhringraj", "amla"],
-    createdAt: "2024-01-20",
-    updatedAt: "2024-03-15",
-  },
-  {
-    id: "p4",
-    name: "Rose Glow Toner",
-    slug: "rose-glow-toner",
-    category: "skincare",
-    price: 699,
-    description:
-      "100% pure Bulgarian rose water toner. Hydrates, tightens pores, balances pH, and preps skin for better serum absorption.",
-    shortDescription: "Pure Bulgarian rose water toner",
-    images: [
-      "/assets/generated/product-toner.dim_500x600.jpg",
-      "/assets/generated/product-toner.dim_500x600.jpg",
-      "/assets/generated/product-toner.dim_500x600.jpg",
-      "/assets/generated/product-toner.dim_500x600.jpg",
-      "/assets/generated/product-toner.dim_500x600.jpg",
-    ],
-    rating: 4.5,
-    reviewCount: 156,
-    inStock: true,
-    stock: 65,
-    isBestseller: false,
-    isNew: true,
-    isLowStock: false,
-    tags: ["rose", "toner", "hydrating", "pore-minimizing"],
-    createdAt: "2024-03-01",
-    updatedAt: "2024-03-20",
-  },
-  {
-    id: "p5",
-    name: "Dewy Skin Foundation",
-    slug: "dewy-skin-foundation",
-    category: "makeup",
-    price: 999,
-    originalPrice: 1199,
-    description:
-      "Buildable coverage foundation with a natural dewy finish. Infused with hyaluronic acid and SPF 20. 24-hour hydration. Available in 12 shades for all Indian skin tones.",
-    shortDescription: "Dewy finish, SPF 20, 24-hr hydration",
-    images: [
-      "/assets/generated/product-foundation.dim_500x600.jpg",
-      "/assets/generated/product-foundation.dim_500x600.jpg",
-      "/assets/generated/product-foundation.dim_500x600.jpg",
-      "/assets/generated/product-foundation.dim_500x600.jpg",
-      "/assets/generated/product-foundation.dim_500x600.jpg",
-    ],
-    rating: 4.4,
-    reviewCount: 98,
-    inStock: true,
-    stock: 45,
-    isBestseller: false,
-    isNew: true,
-    isLowStock: false,
-    tags: ["foundation", "dewy", "SPF", "hyaluronic acid"],
-    createdAt: "2024-03-05",
-    updatedAt: "2024-03-18",
-  },
-  {
-    id: "p6",
-    name: "Nourishing Argan Shampoo",
-    slug: "nourishing-argan-shampoo",
-    category: "haircare",
-    price: 599,
-    description:
-      "Sulphate-free shampoo enriched with Moroccan argan oil and keratin. Repairs damage, adds shine, and tames frizz for salon-smooth hair.",
-    shortDescription: "Sulphate-free argan & keratin",
-    images: [
-      "/assets/generated/product-shampoo.dim_500x600.jpg",
-      "/assets/generated/product-shampoo.dim_500x600.jpg",
-      "/assets/generated/product-shampoo.dim_500x600.jpg",
-      "/assets/generated/product-shampoo.dim_500x600.jpg",
-      "/assets/generated/product-shampoo.dim_500x600.jpg",
-    ],
-    rating: 4.3,
-    reviewCount: 201,
-    inStock: true,
-    stock: 88,
-    isBestseller: false,
-    isNew: false,
-    isLowStock: false,
-    tags: ["shampoo", "argan-oil", "sulphate-free", "frizz-control"],
-    createdAt: "2024-01-10",
-    updatedAt: "2024-03-08",
-  },
-];
+function mapCategory(cat: BackendProductCategory): ProductCategory {
+  switch (cat) {
+    case BackendProductCategory.Skincare:
+      return "skincare";
+    case BackendProductCategory.Makeup:
+      return "makeup";
+    case BackendProductCategory.Haircare:
+      return "haircare";
+    default:
+      return "skincare";
+  }
+}
 
-const MOCK_REVIEWS: Review[] = [
-  {
-    id: "r1",
-    productId: "p1",
-    userId: "u1",
-    userName: "Priya Krishnamurthy",
-    rating: 5,
-    title: "Transformed my skin in 3 weeks!",
-    body: "I've been using this serum for 3 weeks and the difference is unbelievable. My dark spots have faded significantly and my skin glows naturally. Highly recommend!",
-    images: [],
-    verified: true,
-    createdAt: "2024-03-10",
-  },
-  {
-    id: "r2",
-    productId: "p1",
-    userId: "u2",
-    userName: "Anitha Subramanian",
-    rating: 5,
-    title: "Worth every rupee",
-    body: "The saffron serum is absolutely divine. Light texture, absorbs quickly, and the results speak for themselves. My friends keep asking what I'm doing differently!",
-    images: [],
-    verified: true,
-    createdAt: "2024-03-08",
-  },
-  {
-    id: "r3",
-    productId: "p3",
-    userId: "u3",
-    userName: "Lakshmi Natarajan",
-    rating: 5,
-    title: "My hair stopped falling!",
-    body: "After 2 months of consistent use, my hair fall has reduced by 70%. New baby hairs are growing and my hair feels so much stronger. This is truly magical.",
-    images: [],
-    verified: true,
-    createdAt: "2024-03-05",
-  },
-];
+function toBackendCategory(cat: string): BackendProductCategory {
+  switch (cat.toLowerCase()) {
+    case "makeup":
+      return BackendProductCategory.Makeup;
+    case "haircare":
+      return BackendProductCategory.Haircare;
+    default:
+      return BackendProductCategory.Skincare;
+  }
+}
 
-// ─── Hooks ────────────────────────────────────────────────────────────────────
+function extractImages(p: BackendProduct): string[] {
+  return [p.image1, p.image2, p.image3, p.image4, p.image5, p.image6]
+    .filter((url): url is string => !!url?.trim())
+    .map((url) => url.trim());
+}
+
+function mapProduct(p: BackendProduct): Product {
+  return {
+    id: p.id.toString(),
+    name: p.name,
+    slug: p.name
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, ""),
+    category: mapCategory(p.category),
+    price: Number(p.price),
+    description: p.description,
+    shortDescription: p.description.slice(0, 80),
+    images: extractImages(p),
+    rating: 0,
+    reviewCount: 0,
+    inStock: p.status === ProductStatus.active && p.stock > 0n,
+    stock: Number(p.stock),
+    isBestseller: p.isBestseller,
+    isNew: p.isNew,
+    isLowStock: p.stock > 0n && p.stock <= 10n,
+    tags: [],
+    createdAt: new Date(Number(p.createdAt / 1_000_000n)).toISOString(),
+    updatedAt: new Date(Number(p.createdAt / 1_000_000n)).toISOString(),
+  };
+}
+
+function toImageUrl(url: string | undefined): string | undefined {
+  return url?.trim() || undefined;
+}
+
+function toProductInput(product: Partial<Product>): BackendProductInput {
+  const imgs = (product.images ?? []).slice(0, 6);
+  return {
+    name: product.name ?? "",
+    description: product.description ?? "",
+    price: BigInt(Math.round(product.price ?? 0)),
+    stock: BigInt(Math.round(product.stock ?? 0)),
+    category: toBackendCategory(product.category ?? "skincare"),
+    isBestseller: product.isBestseller ?? false,
+    isNew: product.isNew ?? false,
+    status:
+      product.inStock !== false ? ProductStatus.active : ProductStatus.inactive,
+    image1: toImageUrl(imgs[0]),
+    image2: toImageUrl(imgs[1]),
+    image3: toImageUrl(imgs[2]),
+    image4: toImageUrl(imgs[3]),
+    image5: toImageUrl(imgs[4]),
+    image6: toImageUrl(imgs[5]),
+  };
+}
+
+function parseBigInt(id: string): bigint {
+  const num = Number(id);
+  return Number.isNaN(num) ? 0n : BigInt(num);
+}
+
+// ─── Public hooks ─────────────────────────────────────────────────────────────
 
 export function useProducts(category?: ProductCategory) {
+  const { actor, isFetching } = useSharedActor();
   return useQuery<Product[]>({
-    queryKey: ["products", category],
+    queryKey: ["products", category ?? "all"],
     queryFn: async () => {
-      await new Promise((r) => setTimeout(r, 300));
-      if (category) return MOCK_PRODUCTS.filter((p) => p.category === category);
-      return MOCK_PRODUCTS;
+      if (!actor) return [];
+      let results: BackendProduct[];
+      if (category) {
+        results = await actor.getProductsByCategory(
+          toBackendCategory(category),
+        );
+      } else {
+        results = await actor.listActiveProducts();
+      }
+      return results.map(mapProduct);
     },
+    enabled: !!actor && !isFetching,
   });
 }
 
 export function useProduct(id: string) {
+  const { actor, isFetching } = useSharedActor();
   return useQuery<Product | null>({
     queryKey: ["product", id],
     queryFn: async () => {
-      await new Promise((r) => setTimeout(r, 200));
-      return MOCK_PRODUCTS.find((p) => p.id === id || p.slug === id) ?? null;
+      if (!actor || !id) return null;
+      const numId = parseBigInt(id);
+      if (numId > 0n) {
+        const result = await actor.getProduct(numId);
+        return result ? mapProduct(result) : null;
+      }
+      const all = await actor.listActiveProducts();
+      const slug = id.toLowerCase();
+      const match = all.find(
+        (p) =>
+          p.name
+            .toLowerCase()
+            .replace(/\s+/g, "-")
+            .replace(/[^a-z0-9-]/g, "") === slug,
+      );
+      return match ? mapProduct(match) : null;
     },
-    enabled: !!id,
+    enabled: !!actor && !isFetching && !!id,
   });
 }
 
 export function useBestsellers() {
+  const { actor, isFetching } = useSharedActor();
   return useQuery<Product[]>({
     queryKey: ["products", "bestsellers"],
     queryFn: async () => {
-      await new Promise((r) => setTimeout(r, 200));
-      return MOCK_PRODUCTS.filter((p) => p.isBestseller);
+      if (!actor) return [];
+      const results = await actor.getBestsellers();
+      return results.map(mapProduct);
     },
+    enabled: !!actor && !isFetching,
   });
 }
 
 export function useNewArrivals() {
+  const { actor, isFetching } = useSharedActor();
   return useQuery<Product[]>({
     queryKey: ["products", "new-arrivals"],
     queryFn: async () => {
-      await new Promise((r) => setTimeout(r, 200));
-      return MOCK_PRODUCTS.filter((p) => p.isNew);
+      if (!actor) return [];
+      const results = await actor.getNewArrivals();
+      return results.map(mapProduct);
     },
+    enabled: !!actor && !isFetching,
   });
 }
 
 export function useProductReviews(productId: string) {
-  return useQuery<Review[]>({
+  const { actor, isFetching } = useSharedActor();
+  return useQuery({
     queryKey: ["reviews", productId],
     queryFn: async () => {
-      await new Promise((r) => setTimeout(r, 200));
-      return MOCK_REVIEWS.filter((r) => r.productId === productId);
+      if (!actor || !productId) return [];
+      const numId = parseBigInt(productId);
+      if (numId <= 0n) return [];
+      const results = await actor.listReviewsByProduct(numId);
+      return results.map((r) => ({
+        id: r.id.toString(),
+        productId: r.productId.toString(),
+        userId: r.userId.toText(),
+        userName: "Verified Customer",
+        rating: Number(r.rating),
+        title: "",
+        body: r.text,
+        images: [r.image1, r.image2, r.image3]
+          .filter(Boolean)
+          .map((img) => img!.getDirectURL()),
+        verified: true,
+        createdAt: new Date(Number(r.createdAt / 1_000_000n)).toISOString(),
+      }));
     },
-    enabled: !!productId,
+    enabled: !!actor && !isFetching && !!productId,
   });
 }
 
 export function useSubmitReview() {
+  const { actor } = useSharedActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (review: Omit<Review, "id" | "createdAt">) => {
-      await new Promise((r) => setTimeout(r, 500));
-      return {
-        ...review,
-        id: `r${Date.now()}`,
-        createdAt: new Date().toISOString(),
-      };
+    mutationFn: async ({
+      productId,
+      rating,
+      body,
+    }: {
+      productId: string;
+      userId: string;
+      userName: string;
+      rating: number;
+      title: string;
+      body: string;
+      images: string[];
+      verified: boolean;
+    }) => {
+      if (!actor) throw new Error("Actor not ready");
+      const numId = parseBigInt(productId);
+      return actor.createReview({
+        productId: numId,
+        rating: BigInt(rating),
+        text: body,
+      });
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["reviews", data.productId] });
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["reviews", vars.productId] });
     },
   });
 }
 
+// ─── Admin hooks ──────────────────────────────────────────────────────────────
+
 export function useAdminProducts() {
+  const { actor, isFetching } = useSharedActor();
   return useQuery<Product[]>({
     queryKey: ["admin", "products"],
     queryFn: async () => {
-      await new Promise((r) => setTimeout(r, 300));
-      return MOCK_PRODUCTS;
+      if (!actor) return [];
+      const results = await actor.listProducts();
+      return results.map(mapProduct);
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useAdminCreateProduct() {
+  const { actor } = useSharedActor();
+  const { adminToken } = useAuthStore();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (product: Partial<Product>) => {
+      if (!actor) throw new Error("Actor not ready");
+      if (!adminToken)
+        throw new Error("Not authenticated as admin. Please log in again.");
+      const input = toProductInput(product);
+      const result = await actor.adminCreateProduct(adminToken, input);
+      if (result.__kind__ === "err") throw new Error(result.err);
+      return mapProduct(result.ok);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
+    },
+    onError: (err) => {
+      console.error("Create product failed:", err);
+      queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
+    },
+  });
+}
+
+export function useAdminUpdateProduct() {
+  const { actor } = useSharedActor();
+  const { adminToken } = useAuthStore();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      product,
+    }: { id: string; product: Partial<Product> }) => {
+      if (!actor) throw new Error("Actor not ready");
+      if (!adminToken)
+        throw new Error("Not authenticated as admin. Please log in again.");
+      const numId = parseBigInt(id);
+      const input = toProductInput(product);
+      const result = await actor.adminUpdateProduct(adminToken, numId, input);
+      if (result.__kind__ === "err") throw new Error(result.err);
+      return result.ok;
+    },
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
+      queryClient.invalidateQueries({ queryKey: ["product", vars.id] });
+    },
+    onError: (err) => {
+      console.error("Update product failed:", err);
+      queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
+    },
+  });
+}
+
+export function useAdminDeleteProduct() {
+  const { actor } = useSharedActor();
+  const { adminToken } = useAuthStore();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!actor) throw new Error("Actor not ready");
+      if (!adminToken)
+        throw new Error("Not authenticated as admin. Please log in again.");
+      const numId = parseBigInt(id);
+      const result = await actor.adminDeleteProduct(adminToken, numId);
+      if (result.__kind__ === "err") throw new Error(result.err);
+      return result.ok;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
     },
   });
 }

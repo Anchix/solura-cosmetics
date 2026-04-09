@@ -2,7 +2,6 @@ import {
   OrderStatus as BackendOrderStatus,
   PaymentMethod as BackendPaymentMethod,
   PaymentStatus as BackendPaymentStatus,
-  createActor,
 } from "@/backend";
 import type {
   DailyAnalytics as BackendDailyAnalytics,
@@ -10,6 +9,8 @@ import type {
   CustomerInfo,
   OrderInput,
 } from "@/backend";
+import { useSharedActor } from "@/context/ActorContext";
+import { useAuthStore } from "@/store/authStore";
 import type {
   AdminStats,
   DailyAnalytics,
@@ -20,7 +21,6 @@ import type {
   PaymentStatus,
   ShippingAddress,
 } from "@/types";
-import { useActor } from "@caffeineai/core-infrastructure";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 
@@ -91,22 +91,18 @@ function mapBackendOrder(o: BackendOrder): Order {
   const items: OrderItem[] = o.items.map((item) => ({
     productId: item.productId.toString(),
     productName: item.name,
-    productImage: "/assets/generated/product-serum.dim_500x600.jpg",
+    productImage: "/assets/images/placeholder.svg",
     quantity: Number(item.quantity),
     price: Number(item.price),
   }));
-
-  const subtotal = Number(o.subtotal);
-  const codCharge = Number(o.codSurcharge);
-  const total = Number(o.totalAmount);
 
   return {
     id: o.id.toString(),
     userId: o.userId?.toString() ?? "guest",
     items,
-    subtotal,
-    codCharge,
-    total,
+    subtotal: Number(o.subtotal),
+    codCharge: Number(o.codSurcharge),
+    total: Number(o.totalAmount),
     status: mapOrderStatus(o.orderStatus),
     paymentMethod: mapPaymentMethod(o.paymentMethod),
     paymentStatus: mapPaymentStatus(o.paymentStatus),
@@ -132,7 +128,7 @@ export interface CreateOrderInput {
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 
 export function useUserOrders() {
-  const { actor, isFetching } = useActor(createActor);
+  const { actor, isFetching } = useSharedActor();
   return useQuery<Order[]>({
     queryKey: ["orders", "user"],
     queryFn: async () => {
@@ -145,7 +141,7 @@ export function useUserOrders() {
 }
 
 export function useOrder(orderId: string) {
-  const { actor, isFetching } = useActor(createActor);
+  const { actor, isFetching } = useSharedActor();
   return useQuery<Order | null>({
     queryKey: ["order", orderId],
     queryFn: async () => {
@@ -158,7 +154,7 @@ export function useOrder(orderId: string) {
 }
 
 export function useCreateOrder() {
-  const { actor } = useActor(createActor);
+  const { actor } = useSharedActor();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateOrderInput): Promise<Order> => {
@@ -199,15 +195,19 @@ export function useCreateOrder() {
 }
 
 export function useCancelOrder() {
-  const { actor } = useActor(createActor);
+  const { actor } = useSharedActor();
+  const { adminToken } = useAuthStore();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (orderId: string) => {
       if (!actor) throw new Error("Actor not ready");
-      await actor.adminUpdateOrderStatus(
+      if (!adminToken) throw new Error("Admin token required to cancel orders");
+      const result = await actor.adminUpdateOrderStatus(
+        adminToken,
         BigInt(orderId),
         BackendOrderStatus.Cancelled,
       );
+      if (result.__kind__ === "err") throw new Error(result.err);
       return orderId;
     },
     onSuccess: () => {
@@ -217,46 +217,49 @@ export function useCancelOrder() {
 }
 
 export function useAdminOrders() {
-  const { actor, isFetching } = useActor(createActor);
+  const { actor, isFetching } = useSharedActor();
+  const { adminToken } = useAuthStore();
   const queryClient = useQueryClient();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const query = useQuery<Order[]>({
     queryKey: ["admin", "orders"],
     queryFn: async () => {
-      if (!actor) return [];
-      const orders = await actor.adminListAllOrders();
-      return orders.map(mapBackendOrder);
+      if (!actor || !adminToken) return [];
+      const result = await actor.adminListAllOrders(adminToken);
+      if (result.__kind__ === "err") throw new Error(result.err);
+      return result.ok.map(mapBackendOrder);
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching && !!adminToken,
   });
 
   // Poll every 10 seconds for near-real-time sync
   useEffect(() => {
-    if (!actor || isFetching) return;
+    if (!actor || isFetching || !adminToken) return;
     intervalRef.current = setInterval(() => {
       queryClient.invalidateQueries({ queryKey: ["admin", "orders"] });
     }, 10_000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [actor, isFetching, queryClient]);
+  }, [actor, isFetching, adminToken, queryClient]);
 
   return query;
 }
 
 export function useAdminStats() {
-  const { actor, isFetching } = useActor(createActor);
+  const { actor, isFetching } = useSharedActor();
+  const { adminToken } = useAuthStore();
   const { data: orders } = useAdminOrders();
 
   return useQuery<AdminStats>({
     queryKey: ["admin", "stats"],
     queryFn: async () => {
-      if (!actor) throw new Error("Actor not ready");
-      const analytics: BackendDailyAnalytics[] =
-        await actor.adminGetAnalytics();
+      if (!actor || !adminToken) throw new Error("Actor or token not ready");
+      const result = await actor.adminGetAnalytics(adminToken);
+      if (result.__kind__ === "err") throw new Error(result.err);
+      const analytics: BackendDailyAnalytics[] = result.ok;
 
-      // Map backend analytics to frontend format
       const last7Days: DailyAnalytics[] = analytics.slice(-7).map((d) => ({
         date: new Date(Number(d.date) / 1_000_000).toISOString().split("T")[0],
         orders: Number(d.orderCount),
@@ -264,7 +267,6 @@ export function useAdminStats() {
         newUsers: 0,
       }));
 
-      // Compute totals from analytics
       const totalRevenue = analytics.reduce(
         (acc, d) => acc + Number(d.revenue),
         0,
@@ -278,18 +280,19 @@ export function useAdminStats() {
       return {
         totalOrders,
         totalRevenue,
-        totalProducts: 0, // Provided by useAdminProducts
+        totalProducts: 0,
         totalUsers: 0,
         pendingOrders,
         last7Days,
       };
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching && !!adminToken,
   });
 }
 
 export function useUpdateOrderStatus() {
-  const { actor } = useActor(createActor);
+  const { actor } = useSharedActor();
+  const { adminToken } = useAuthStore();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
@@ -297,10 +300,14 @@ export function useUpdateOrderStatus() {
       status,
     }: { orderId: string; status: OrderStatus }) => {
       if (!actor) throw new Error("Actor not ready");
-      await actor.adminUpdateOrderStatus(
+      if (!adminToken)
+        throw new Error("Not authenticated as admin. Please log in again.");
+      const result = await actor.adminUpdateOrderStatus(
+        adminToken,
         BigInt(orderId),
         toBackendOrderStatus(status),
       );
+      if (result.__kind__ === "err") throw new Error(result.err);
       return orderId;
     },
     onSuccess: () => {

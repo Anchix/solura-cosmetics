@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useSharedActor } from "@/context/ActorContext";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { Link, useRouter } from "@tanstack/react-router";
@@ -12,6 +13,7 @@ import {
   Menu,
   Package,
   ShoppingCart,
+  Tag,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -20,6 +22,7 @@ const ADMIN_LINKS = [
   { label: "Products", href: "/admin/products", icon: Package },
   { label: "Orders", href: "/admin/orders", icon: ShoppingCart },
   { label: "Blog", href: "/admin/blog", icon: BookOpen },
+  { label: "Coupons", href: "/admin/coupons", icon: Tag },
   { label: "Banners", href: "/admin/banners", icon: Image },
 ];
 
@@ -62,13 +65,22 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ children, title }: AdminLayoutProps) {
-  const { logout } = useAuthStore();
+  const { adminToken, clearAdminSession } = useAuthStore();
+  const { actor } = useSharedActor();
   const router = useRouter();
   const currentPath = router.state.location.pathname;
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    // Invalidate server-side session first
+    if (actor && adminToken) {
+      try {
+        await actor.adminLogout(adminToken);
+      } catch {
+        // Ignore — server may already have cleared it
+      }
+    }
+    clearAdminSession();
     router.navigate({ to: "/" });
   };
 

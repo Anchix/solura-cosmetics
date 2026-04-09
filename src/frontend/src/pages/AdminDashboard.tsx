@@ -2,6 +2,7 @@ import AdminLayout from "@/components/AdminLayout";
 import { StatusBadge } from "@/components/Badge";
 import { StatCardSkeleton } from "@/components/LoadingSkeleton";
 import { Button } from "@/components/ui/button";
+import { useSharedActor } from "@/context/ActorContext";
 import { useAdminOrders, useAdminStats } from "@/hooks/useOrders";
 import { useAdminProducts } from "@/hooks/useProducts";
 import { useAuthStore } from "@/store/authStore";
@@ -10,12 +11,12 @@ import {
   ArrowRight,
   Clock,
   IndianRupee,
+  Loader2,
   Package,
   ShoppingCart,
-  TrendingUp,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -27,13 +28,88 @@ import {
   YAxis,
 } from "recharts";
 
-// TODO: Move to server-side authentication before production deployment
-const ADMIN_PASSWORD = "solura2024@BHY";
+// ─── Login Gate ────────────────────────────────────────────────────────────────
 
 function AdminLoginGate() {
-  const { setAdmin } = useAuthStore();
+  const { adminToken, setAdminSession } = useAuthStore();
+  const { actor, isFetching } = useSharedActor();
+
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+
+  // On mount: if we have a stored token, verify it with the canister
+  useEffect(() => {
+    if (!adminToken || !actor || isFetching) return;
+
+    let cancelled = false;
+    setVerifying(true);
+
+    actor
+      .adminVerifyToken(adminToken)
+      .then((valid) => {
+        if (cancelled) return;
+        setVerifying(false);
+        if (valid) {
+          // Token is still valid — restore session silently
+          setAdminSession(adminToken);
+        }
+        // If invalid, the login form will show (isAdmin stays false until re-login)
+      })
+      .catch(() => {
+        if (!cancelled) setVerifying(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [actor, isFetching, adminToken, setAdminSession]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!password.trim()) {
+      setError("Please enter the admin password.");
+      return;
+    }
+
+    if (!actor) {
+      setError("Connection not ready. Please wait a moment and try again.");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+
+    try {
+      const result = await actor.adminLogin(password);
+
+      if (result.__kind__ === "ok") {
+        setAdminSession(result.ok);
+      } else {
+        setError("Invalid password. Please try again.");
+      }
+    } catch (err) {
+      console.error("Admin login error:", err);
+      setError("Login failed. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const isActorReady = !!actor && !isFetching;
+
+  if (verifying) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <p className="text-sm">Verifying session…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
@@ -43,19 +119,15 @@ function AdminLoginGate() {
             Solura
           </span>
           <p className="text-muted-foreground text-sm mt-1">Admin Access</p>
+          {!isActorReady && (
+            <p className="text-xs text-muted-foreground mt-2 flex items-center justify-center gap-1.5">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Connecting…
+            </p>
+          )}
         </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (password === ADMIN_PASSWORD) {
-              setAdmin(true);
-              setError("");
-            } else {
-              setError("Incorrect password. Please try again.");
-            }
-          }}
-          className="space-y-4"
-        >
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <label
               htmlFor="admin-password"
@@ -71,15 +143,25 @@ function AdminLoginGate() {
               placeholder="Enter admin password"
               className="w-full px-4 py-2.5 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               data-ocid="admin-password-input"
+              disabled={loading || !isActorReady}
+              autoComplete="current-password"
             />
             {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
           <Button
             type="submit"
             className="w-full"
+            disabled={loading || !isActorReady}
             data-ocid="admin-login-submit"
           >
-            Access Dashboard
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Signing in…
+              </span>
+            ) : (
+              "Access Dashboard"
+            )}
           </Button>
         </form>
       </div>
@@ -87,13 +169,17 @@ function AdminLoginGate() {
   );
 }
 
+// ─── Dashboard ─────────────────────────────────────────────────────────────────
+
 export default function AdminDashboard() {
-  const { isAdmin } = useAuthStore();
+  const { isAdmin, adminToken } = useAuthStore();
+
   const { data: stats, isLoading } = useAdminStats();
   const { data: products } = useAdminProducts();
   const { data: orders } = useAdminOrders();
 
-  if (!isAdmin) return <AdminLoginGate />;
+  // Show login gate if not authenticated or no valid token
+  if (!isAdmin || !adminToken) return <AdminLoginGate />;
 
   const recentOrders = orders?.slice(0, 10) ?? [];
 

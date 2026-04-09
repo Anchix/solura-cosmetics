@@ -2,7 +2,6 @@ import List "mo:core/List";
 import Time "mo:core/Time";
 import ProductTypes "../types/product";
 import CommonTypes "../types/common";
-import Storage "mo:caffeineai-object-storage/Storage";
 
 module {
   public func createProduct(
@@ -59,7 +58,7 @@ module {
     let existing = products.find(func(p) { p.id == id });
     switch (existing) {
       case null { false };
-      case (?p) {
+      case (?_) {
         products.mapInPlace(func(product) {
           if (product.id == id) {
             {
@@ -123,16 +122,16 @@ module {
     products.filter(func(p) { p.category == category and p.status == #active }).toArray();
   };
 
-  public func addBanner(
+  public func addBannerUrl(
     banners : List.List<ProductTypes.Banner>,
     nextId : Nat,
     name : Text,
-    image : Storage.ExternalBlob,
+    imageUrl : Text,
   ) : ProductTypes.Banner {
     let banner : ProductTypes.Banner = {
       id = nextId;
       name = name;
-      image = image;
+      imageUrl = imageUrl;
       createdAt = Time.now();
     };
     banners.add(banner);

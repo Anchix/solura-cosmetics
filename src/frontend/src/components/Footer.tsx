@@ -28,12 +28,16 @@ const ACCOUNT_ROUTER_LINKS = [
   { label: "My Orders", href: "/account/orders" as "/" },
 ];
 
+const CERTIFICATIONS = [
+  { label: "FDA Approved", icon: "✓" },
+  { label: "GMP Certified", icon: "✓" },
+  { label: "ISO Certified", icon: "✓" },
+  { label: "Cruelty Free", icon: "🐰" },
+  { label: "Non GMO", icon: "🌿" },
+];
+
 export default function Footer() {
   const year = new Date().getFullYear();
-  const hostname =
-    typeof window !== "undefined"
-      ? window.location.hostname
-      : "soluracosmo.com";
 
   return (
     <footer className="bg-card border-t border-border mt-auto">
@@ -197,6 +201,29 @@ export default function Footer() {
         </div>
       </div>
 
+      {/* Brand Certifications */}
+      <div className="border-t border-border bg-muted/30 py-6 px-4">
+        <div className="container mx-auto">
+          <p className="text-center text-xs text-muted-foreground uppercase tracking-widest mb-4 font-medium">
+            Certified & Trusted
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {CERTIFICATIONS.map(({ label, icon }) => (
+              <div
+                key={label}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors"
+                data-ocid={`cert-${label.toLowerCase().replace(/\s+/g, "-")}`}
+              >
+                <span className="text-sm">{icon}</span>
+                <span className="text-xs font-semibold text-foreground tracking-wide">
+                  {label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <Separator />
 
       {/* Bottom bar */}
@@ -207,14 +234,14 @@ export default function Footer() {
           <span>GST: 33AFUFS3776C1ZM</span>
           <span className="hidden md:inline">·</span>
           <span>
-            Built with love using{" "}
+            Built and marketed by{" "}
             <a
-              href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(hostname)}`}
+              href="https://wa.me/917857905819"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-primary transition-colors"
             >
-              caffeine.ai
+              BrandHype Solutions
             </a>
           </span>
         </div>

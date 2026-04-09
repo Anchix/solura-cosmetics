@@ -1,4 +1,4 @@
-export type ProductCategory = "skincare" | "makeup" | "haircare" | "bath-body";
+export type ProductCategory = "skincare" | "makeup" | "haircare";
 
 export interface ProductVariant {
   id: string;

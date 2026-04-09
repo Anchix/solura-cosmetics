@@ -1,5 +1,3 @@
-import Storage "mo:caffeineai-object-storage/Storage";
-
 module {
   public type ProductCategory = {
     #Skincare;
@@ -18,12 +16,12 @@ module {
     category : ProductCategory;
     price : Nat;
     description : Text;
-    image1 : ?Storage.ExternalBlob;
-    image2 : ?Storage.ExternalBlob;
-    image3 : ?Storage.ExternalBlob;
-    image4 : ?Storage.ExternalBlob;
-    image5 : ?Storage.ExternalBlob;
-    image6 : ?Storage.ExternalBlob;
+    image1 : ?Text;
+    image2 : ?Text;
+    image3 : ?Text;
+    image4 : ?Text;
+    image5 : ?Text;
+    image6 : ?Text;
     stock : Nat;
     status : ProductStatus;
     isBestseller : Bool;
@@ -36,12 +34,12 @@ module {
     category : ProductCategory;
     price : Nat;
     description : Text;
-    image1 : ?Storage.ExternalBlob;
-    image2 : ?Storage.ExternalBlob;
-    image3 : ?Storage.ExternalBlob;
-    image4 : ?Storage.ExternalBlob;
-    image5 : ?Storage.ExternalBlob;
-    image6 : ?Storage.ExternalBlob;
+    image1 : ?Text;
+    image2 : ?Text;
+    image3 : ?Text;
+    image4 : ?Text;
+    image5 : ?Text;
+    image6 : ?Text;
     stock : Nat;
     status : ProductStatus;
     isBestseller : Bool;
@@ -51,7 +49,7 @@ module {
   public type Banner = {
     id : Nat;
     name : Text;
-    image : Storage.ExternalBlob;
+    imageUrl : Text;
     createdAt : Int;
   };
 };

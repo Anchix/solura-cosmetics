@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MOCK_PRODUCTS, useProducts } from "@/hooks/useProducts";
+import { useProducts } from "@/hooks/useProducts";
 import type { Product, ProductCategory } from "@/types";
 import { Link } from "@tanstack/react-router";
 import { Filter, Search, SlidersHorizontal, X } from "lucide-react";
@@ -26,7 +26,6 @@ const CATEGORY_LABELS: Record<CategoryFilter, string> = {
   skincare: "Skincare",
   makeup: "Makeup",
   haircare: "Haircare",
-  "bath-body": "Bath & Body",
 };
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
@@ -81,7 +80,6 @@ function FilterSidebar({
     "skincare",
     "makeup",
     "haircare",
-    "bath-body",
   ] as CategoryFilter[];
 
   return (
@@ -206,7 +204,7 @@ export default function ShopPage() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const filtered = useMemo(() => {
-    let list = products ?? MOCK_PRODUCTS;
+    let list = products ?? [];
     if (category !== "all") list = list.filter((p) => p.category === category);
     list = list.filter((p) => p.price <= priceMax);
     if (search.trim()) {

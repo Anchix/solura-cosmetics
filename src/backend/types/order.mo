@@ -47,8 +47,10 @@ module {
     subtotal : Nat;
     gstAmount : Nat;
     codSurcharge : Nat;
+    discountAmount : Nat;
     totalAmount : Nat;
     razorpayOrderId : ?Text;
+    couponCode : ?Text;
     createdAt : Int;
   };
 
@@ -57,6 +59,7 @@ module {
     customer : CustomerInfo;
     paymentMethod : PaymentMethod;
     razorpayOrderId : ?Text;
+    couponCode : ?Text;
   };
 
   public type InvoiceData = {
@@ -66,6 +69,7 @@ module {
     subtotal : Nat;
     gstAmount : Nat;
     codSurcharge : Nat;
+    discountAmount : Nat;
     totalAmount : Nat;
     paymentMethod : PaymentMethod;
     paymentStatus : PaymentStatus;
@@ -73,6 +77,7 @@ module {
     gstNumber : Text;
     companyName : Text;
     companyAddress : Text;
+    couponCode : ?Text;
   };
 
   public type DailyAnalytics = {

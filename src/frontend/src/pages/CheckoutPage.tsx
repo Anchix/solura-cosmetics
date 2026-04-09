@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useValidateCoupon } from "@/hooks/useCoupons";
 import { useCreateOrder } from "@/hooks/useOrders";
 import { useAuthStore } from "@/store/authStore";
 import { useCartStore } from "@/store/cartStore";
@@ -16,7 +17,9 @@ import {
   CreditCard,
   Loader2,
   MapPin,
+  Tag,
   Truck,
+  X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -76,7 +79,9 @@ export default function CheckoutPage() {
   const { items, getTotal, clearCart } = useCartStore();
   const { user } = useAuthStore();
   const createOrder = useCreateOrder();
+  const validateCoupon = useValidateCoupon();
   const subtotal = getTotal();
+
   const [paymentMethod, setPaymentMethod] = useState<"razorpay" | "cod">(
     "razorpay",
   );
@@ -84,11 +89,21 @@ export default function CheckoutPage() {
   const [pincodeError, setPincodeError] = useState("");
   const [sameAsBilling, setSameAsBilling] = useState(true);
   const [paymentError, setPaymentError] = useState("");
+
+  // Coupon state
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discountAmount: number;
+  } | null>(null);
+  const [couponError, setCouponError] = useState("");
+
   const razorpayLoaded = useRef(false);
 
   const gst = Math.round(subtotal * GST_RATE);
   const codCharge = paymentMethod === "cod" ? COD_CHARGE : 0;
-  const total = subtotal + gst + codCharge;
+  const discount = appliedCoupon?.discountAmount ?? 0;
+  const total = Math.max(0, subtotal + gst + codCharge - discount);
 
   const [form, setForm] = useState<FormState>({
     name: user?.name ?? "",
@@ -101,7 +116,6 @@ export default function CheckoutPage() {
     pincode: "",
   });
 
-  // Preload Razorpay script
   useEffect(() => {
     if (!razorpayLoaded.current) {
       razorpayLoaded.current = true;
@@ -132,7 +146,6 @@ export default function CheckoutPage() {
                   city: post.District ?? prev.city,
                   state: post.State ?? prev.state,
                 }));
-                setPincodeError("");
               }
             } else {
               setPincodeError("Invalid pincode. Please check and try again.");
@@ -142,6 +155,38 @@ export default function CheckoutPage() {
           .finally(() => setPincodeLoading(false));
       }
     }
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError("Please enter a coupon code.");
+      return;
+    }
+    setCouponError("");
+    try {
+      const result = await validateCoupon.mutateAsync({
+        code: couponCode,
+        orderTotal: subtotal,
+      });
+      if (result.valid) {
+        setAppliedCoupon({
+          code: couponCode.trim().toUpperCase(),
+          discountAmount: result.discountAmount,
+        });
+        setCouponCode("");
+        toast.success(result.message);
+      } else {
+        setCouponError(result.message);
+        setAppliedCoupon(null);
+      }
+    } catch {
+      setCouponError("Could not validate coupon. Please try again.");
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponError("");
   };
 
   const isValid =
@@ -185,10 +230,7 @@ export default function CheckoutPage() {
       shippingAddress: shippingAddr,
     });
     clearCart();
-    navigate({
-      to: "/order-success/$orderId",
-      params: { orderId: order.id },
-    });
+    navigate({ to: "/order-success/$orderId", params: { orderId: order.id } });
   };
 
   const handleRazorpay = async () => {
@@ -199,8 +241,6 @@ export default function CheckoutPage() {
       );
       return;
     }
-
-    // Create a pending order first to get orderId
     const order = await createOrder.mutateAsync({
       items: orderItems,
       subtotal,
@@ -209,10 +249,9 @@ export default function CheckoutPage() {
       paymentMethod: "razorpay",
       shippingAddress: shippingAddr,
     });
-
     const options: RazorpayOptions = {
-      key: "rzp_test_solura", // Replace with real key
-      amount: total * 100, // paise
+      key: "rzp_test_solura",
+      amount: total * 100,
       currency: "INR",
       name: "Solura Cosmetics",
       description: `Order ${order.id}`,
@@ -225,21 +264,15 @@ export default function CheckoutPage() {
           params: { orderId: order.id },
         });
       },
-      prefill: {
-        name: form.name,
-        email: form.email,
-        contact: form.phone,
-      },
+      prefill: { name: form.name, email: form.email, contact: form.phone },
       theme: { color: "#c2473a" },
       modal: {
-        ondismiss: () => {
+        ondismiss: () =>
           setPaymentError(
             "Payment was cancelled. You can retry or choose Cash on Delivery.",
-          );
-        },
+          ),
       },
     };
-
     const rzp = new window.Razorpay(options);
     rzp.open();
   };
@@ -255,7 +288,6 @@ export default function CheckoutPage() {
       navigate({ to: "/cart" });
       return;
     }
-
     try {
       if (paymentMethod === "cod") {
         await handleCOD();
@@ -449,7 +481,6 @@ export default function CheckoutPage() {
                       />
                     </div>
                   </div>
-
                   <div className="mt-4 flex items-center gap-2">
                     <Checkbox
                       id="sameAsBilling"
@@ -474,7 +505,6 @@ export default function CheckoutPage() {
                       Payment Method
                     </h2>
                   </div>
-
                   <div className="space-y-3">
                     {/* Razorpay */}
                     <button
@@ -509,11 +539,9 @@ export default function CheckoutPage() {
                           UPI · Cards · Net Banking · Wallets via Razorpay
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-primary font-semibold bg-primary/10 px-2 py-0.5 rounded-full">
-                          No extra charge
-                        </span>
-                      </div>
+                      <span className="text-xs text-primary font-semibold bg-primary/10 px-2 py-0.5 rounded-full">
+                        No extra charge
+                      </span>
                     </button>
 
                     {/* COD */}
@@ -559,8 +587,7 @@ export default function CheckoutPage() {
                         <Truck className="h-4 w-4 flex-shrink-0 mt-0.5" />
                         <span>
                           A ₹{COD_CHARGE} handling charge is added for Cash on
-                          Delivery orders. Pay the total amount to the delivery
-                          partner.
+                          Delivery orders.
                         </span>
                       </div>
                     )}
@@ -591,6 +618,7 @@ export default function CheckoutPage() {
                     Order Summary
                   </h2>
 
+                  {/* Items list */}
                   <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
                     {items.map((item) => (
                       <div
@@ -629,6 +657,82 @@ export default function CheckoutPage() {
 
                   <Separator />
 
+                  {/* Coupon input */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5 text-sm">
+                      <Tag className="h-3.5 w-3.5 text-primary" />
+                      Coupon Code
+                    </Label>
+                    {appliedCoupon ? (
+                      <div className="flex items-center justify-between bg-primary/8 border border-primary/20 rounded-lg px-3 py-2">
+                        <div>
+                          <span className="font-mono text-sm font-bold text-primary">
+                            {appliedCoupon.code}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            −₹
+                            {appliedCoupon.discountAmount.toLocaleString(
+                              "en-IN",
+                            )}{" "}
+                            off
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRemoveCoupon}
+                          className="text-muted-foreground hover:text-destructive transition-colors"
+                          aria-label="Remove coupon"
+                          data-ocid="checkout-remove-coupon"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Input
+                          value={couponCode}
+                          onChange={(e) => {
+                            setCouponCode(e.target.value.toUpperCase());
+                            setCouponError("");
+                          }}
+                          placeholder="Enter code"
+                          className="font-mono uppercase text-sm"
+                          data-ocid="checkout-coupon-input"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleApplyCoupon();
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleApplyCoupon}
+                          disabled={validateCoupon.isPending}
+                          className="flex-shrink-0"
+                          data-ocid="checkout-apply-coupon"
+                        >
+                          {validateCoupon.isPending ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            "Apply"
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                    {couponError && (
+                      <p className="text-xs text-destructive flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                        {couponError}
+                      </p>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Pricing breakdown */}
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Subtotal</span>
@@ -648,6 +752,18 @@ export default function CheckoutPage() {
                           COD Charge
                         </span>
                         <span>₹{COD_CHARGE}</span>
+                      </div>
+                    )}
+                    {appliedCoupon && (
+                      <div className="flex justify-between text-primary font-medium">
+                        <span className="flex items-center gap-1">
+                          <Tag className="h-3.5 w-3.5" />
+                          Coupon ({appliedCoupon.code})
+                        </span>
+                        <span>
+                          −₹
+                          {appliedCoupon.discountAmount.toLocaleString("en-IN")}
+                        </span>
                       </div>
                     )}
                   </div>

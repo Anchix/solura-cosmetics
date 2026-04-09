@@ -61,12 +61,12 @@ type ProductInput =
  record {
    category: ProductCategory;
    description: text;
-   image1: opt ExternalBlob;
-   image2: opt ExternalBlob;
-   image3: opt ExternalBlob;
-   image4: opt ExternalBlob;
-   image5: opt ExternalBlob;
-   image6: opt ExternalBlob;
+   image1: opt text;
+   image2: opt text;
+   image3: opt text;
+   image4: opt text;
+   image5: opt text;
+   image6: opt text;
    isBestseller: bool;
    isNew: bool;
    name: text;
@@ -87,12 +87,12 @@ type Product =
    createdAt: int;
    description: text;
    id: nat;
-   image1: opt ExternalBlob;
-   image2: opt ExternalBlob;
-   image3: opt ExternalBlob;
-   image4: opt ExternalBlob;
-   image5: opt ExternalBlob;
-   image6: opt ExternalBlob;
+   image1: opt text;
+   image2: opt text;
+   image3: opt text;
+   image4: opt text;
+   image5: opt text;
+   image6: opt text;
    isBestseller: bool;
    isNew: bool;
    name: text;
@@ -128,6 +128,7 @@ type OrderItem =
  };
 type OrderInput = 
  record {
+   couponCode: opt text;
    customer: CustomerInfo;
    items: vec OrderItem;
    paymentMethod: PaymentMethod;
@@ -137,8 +138,10 @@ type OrderId = nat;
 type Order = 
  record {
    codSurcharge: nat;
+   couponCode: opt text;
    createdAt: int;
    customer: CustomerInfo;
+   discountAmount: nat;
    gstAmount: nat;
    id: nat;
    items: vec OrderItem;
@@ -155,7 +158,9 @@ type InvoiceData =
    codSurcharge: nat;
    companyAddress: text;
    companyName: text;
+   couponCode: opt text;
    customer: CustomerInfo;
+   discountAmount: nat;
    gstAmount: nat;
    gstNumber: text;
    items: vec OrderItem;
@@ -167,6 +172,11 @@ type InvoiceData =
    totalAmount: nat;
  };
 type ExternalBlob = blob;
+type DiscountType = 
+ variant {
+   Fixed;
+   Percentage;
+ };
 type DailyAnalytics = 
  record {
    date: int;
@@ -184,6 +194,37 @@ type CustomerInfo =
    pincode: text;
    state: text;
  };
+type CouponValidationResult = 
+ variant {
+   Invalid: text;
+   Valid: record {
+            coupon: Coupon;
+            discountAmount: nat;
+          };
+ };
+type CouponInput = 
+ record {
+   code: text;
+   discountType: DiscountType;
+   discountValue: nat;
+   expiryDate: opt int;
+   isActive: bool;
+   maxUses: opt nat;
+   minOrderAmount: opt nat;
+ };
+type Coupon = 
+ record {
+   code: text;
+   createdAt: int;
+   discountType: DiscountType;
+   discountValue: nat;
+   expiryDate: opt int;
+   id: nat;
+   isActive: bool;
+   maxUses: opt nat;
+   minOrderAmount: opt nat;
+   usedCount: nat;
+ };
 type BlogStatus = 
  variant {
    draft;
@@ -194,7 +235,7 @@ type BlogPost =
    author: text;
    category: text;
    content: text;
-   coverImage: opt ExternalBlob;
+   coverImage: opt text;
    createdAt: int;
    excerpt: text;
    id: BlogId;
@@ -208,7 +249,7 @@ type BlogInput =
    author: text;
    category: text;
    content: text;
-   coverImage: opt ExternalBlob;
+   coverImage: opt text;
    excerpt: text;
    slug: text;
    status: BlogStatus;
@@ -219,7 +260,7 @@ type Banner =
  record {
    createdAt: int;
    id: nat;
-   image: ExternalBlob;
+   imageUrl: text;
    name: text;
  };
 type Address = 
@@ -243,18 +284,90 @@ service : {
   _immutableObjectStorageUpdateGatewayPrincipals: () -> ();
   _initializeAccessControl: () -> ();
   addAddress: (address: Address) -> (bool);
-  adminAddBanner: (name: text, image: ExternalBlob) -> (Banner);
-  adminCreateBlogPost: (input: BlogInput) -> (BlogPost);
-  adminCreateProduct: (input: ProductInput) -> (Product);
-  adminDeleteBanner: (id: nat) -> (bool);
-  adminDeleteBlogPost: (id: BlogId) -> (bool);
-  adminDeleteProduct: (id: ProductId) -> (bool);
-  adminGetAnalytics: () -> (vec DailyAnalytics) query;
-  adminListAllBlogPosts: () -> (vec BlogPost);
-  adminListAllOrders: () -> (vec Order) query;
-  adminUpdateBlogPost: (id: BlogId, input: BlogInput) -> (opt BlogPost);
-  adminUpdateOrderStatus: (id: OrderId, status: OrderStatus) -> (bool);
-  adminUpdateProduct: (id: ProductId, input: ProductInput) -> (bool);
+  adminAddBanner: (token: text, name: text, imageUrl: text) ->
+   (variant {
+      err: text;
+      ok: Banner;
+    });
+  adminCreateBlogPost: (token: text, input: BlogInput) ->
+   (variant {
+      err: text;
+      ok: BlogPost;
+    });
+  adminCreateCoupon: (token: text, input: CouponInput) ->
+   (variant {
+      err: text;
+      ok: Coupon;
+    });
+  adminCreateProduct: (token: text, input: ProductInput) ->
+   (variant {
+      err: text;
+      ok: Product;
+    });
+  adminDeleteBanner: (token: text, id: nat) ->
+   (variant {
+      err: text;
+      ok: bool;
+    });
+  adminDeleteBlogPost: (token: text, id: BlogId) ->
+   (variant {
+      err: text;
+      ok: bool;
+    });
+  adminDeleteCoupon: (token: text, id: nat) ->
+   (variant {
+      err: text;
+      ok: bool;
+    });
+  adminDeleteProduct: (token: text, id: ProductId) ->
+   (variant {
+      err: text;
+      ok: bool;
+    });
+  adminGetAnalytics: (token: text) ->
+   (variant {
+      err: text;
+      ok: vec DailyAnalytics;
+    });
+  adminListAllBlogPosts: (token: text) ->
+   (variant {
+      err: text;
+      ok: vec BlogPost;
+    });
+  adminListAllOrders: (token: text) -> (variant {
+                                          err: text;
+                                          ok: vec Order;
+                                        });
+  adminListCoupons: (token: text) -> (variant {
+                                        err: text;
+                                        ok: vec Coupon;
+                                      });
+  adminLogin: (password: text) -> (variant {
+                                     err: text;
+                                     ok: text;
+                                   });
+  adminLogout: (token: text) -> ();
+  adminUpdateBlogPost: (token: text, id: BlogId, input: BlogInput) ->
+   (variant {
+      err: text;
+      ok: opt BlogPost;
+    });
+  adminUpdateCoupon: (token: text, id: nat, input: CouponInput) ->
+   (variant {
+      err: text;
+      ok: bool;
+    });
+  adminUpdateOrderStatus: (token: text, id: OrderId, status: OrderStatus) ->
+   (variant {
+      err: text;
+      ok: bool;
+    });
+  adminUpdateProduct: (token: text, id: ProductId, input: ProductInput) ->
+   (variant {
+      err: text;
+      ok: bool;
+    });
+  adminVerifyToken: (token: text) -> (bool) query;
   assignCallerUserRole: (user: principal, role: UserRole) -> ();
   chatbotQuery: (userMessage: text) -> (text);
   createOrder: (input: OrderInput) -> (Order);
@@ -305,4 +418,6 @@ service : {
     }) query;
   updatePaymentStatus: (id: OrderId, status: PaymentStatus, razorpayOrderId:
    opt text) -> (bool);
+  validateCoupon: (code: text, cartTotal: nat) ->
+   (CouponValidationResult) query;
 }

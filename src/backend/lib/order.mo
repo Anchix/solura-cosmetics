@@ -14,6 +14,7 @@ module {
   public func calculateTotal(
     items : [OrderTypes.OrderItem],
     paymentMethod : OrderTypes.PaymentMethod,
+    discountAmount : Nat,
   ) : { subtotal : Nat; gstAmount : Nat; codSurcharge : Nat; totalAmount : Nat } {
     let subtotal = items.foldLeft(
       0,
@@ -24,7 +25,8 @@ module {
       case (#COD) { COD_SURCHARGE };
       case (_) { 0 };
     };
-    let totalAmount = subtotal + gstAmount + codSurcharge;
+    let baseTotal = subtotal + gstAmount + codSurcharge;
+    let totalAmount = if (discountAmount >= baseTotal) { 0 } else { baseTotal - discountAmount };
     { subtotal; gstAmount; codSurcharge; totalAmount };
   };
 
@@ -34,8 +36,9 @@ module {
     input : OrderTypes.OrderInput,
     userId : ?Principal,
     now : Int,
+    discountAmount : Nat,
   ) : OrderTypes.Order {
-    let totals = calculateTotal(input.items, input.paymentMethod);
+    let totals = calculateTotal(input.items, input.paymentMethod, discountAmount);
     let order : OrderTypes.Order = {
       id = nextId;
       userId = userId;
@@ -47,8 +50,10 @@ module {
       subtotal = totals.subtotal;
       gstAmount = totals.gstAmount;
       codSurcharge = totals.codSurcharge;
+      discountAmount = discountAmount;
       totalAmount = totals.totalAmount;
       razorpayOrderId = input.razorpayOrderId;
+      couponCode = input.couponCode;
       createdAt = now;
     };
     orders.add(order);
@@ -135,6 +140,7 @@ module {
       subtotal = order.subtotal;
       gstAmount = order.gstAmount;
       codSurcharge = order.codSurcharge;
+      discountAmount = order.discountAmount;
       totalAmount = order.totalAmount;
       paymentMethod = order.paymentMethod;
       paymentStatus = order.paymentStatus;
@@ -142,6 +148,7 @@ module {
       gstNumber = GST_NUMBER;
       companyName = COMPANY_NAME;
       companyAddress = COMPANY_ADDRESS;
+      couponCode = order.couponCode;
     };
   };
 

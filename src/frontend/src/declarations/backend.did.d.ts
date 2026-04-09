@@ -22,7 +22,7 @@ export interface Banner {
   'id' : bigint,
   'name' : string,
   'createdAt' : bigint,
-  'image' : ExternalBlob,
+  'imageUrl' : string,
 }
 export type BlogId = bigint;
 export interface BlogInput {
@@ -31,7 +31,7 @@ export interface BlogInput {
   'content' : string,
   'slug' : string,
   'author' : string,
-  'coverImage' : [] | [ExternalBlob],
+  'coverImage' : [] | [string],
   'excerpt' : string,
   'category' : string,
 }
@@ -43,13 +43,36 @@ export interface BlogPost {
   'createdAt' : bigint,
   'slug' : string,
   'author' : string,
-  'coverImage' : [] | [ExternalBlob],
+  'coverImage' : [] | [string],
   'updatedAt' : bigint,
   'excerpt' : string,
   'category' : string,
 }
 export type BlogStatus = { 'published' : null } |
   { 'draft' : null };
+export interface Coupon {
+  'id' : bigint,
+  'discountValue' : bigint,
+  'expiryDate' : [] | [bigint],
+  'code' : string,
+  'createdAt' : bigint,
+  'discountType' : DiscountType,
+  'usedCount' : bigint,
+  'isActive' : boolean,
+  'minOrderAmount' : [] | [bigint],
+  'maxUses' : [] | [bigint],
+}
+export interface CouponInput {
+  'discountValue' : bigint,
+  'expiryDate' : [] | [bigint],
+  'code' : string,
+  'discountType' : DiscountType,
+  'isActive' : boolean,
+  'minOrderAmount' : [] | [bigint],
+  'maxUses' : [] | [bigint],
+}
+export type CouponValidationResult = { 'Invalid' : string } |
+  { 'Valid' : { 'discountAmount' : bigint, 'coupon' : Coupon } };
 export interface CustomerInfo {
   'city' : string,
   'name' : string,
@@ -65,13 +88,17 @@ export interface DailyAnalytics {
   'date' : bigint,
   'orderCount' : bigint,
 }
+export type DiscountType = { 'Fixed' : null } |
+  { 'Percentage' : null };
 export type ExternalBlob = Uint8Array;
 export interface InvoiceData {
+  'couponCode' : [] | [string],
   'paymentStatus' : PaymentStatus,
   'paymentMethod' : PaymentMethod,
   'codSurcharge' : bigint,
   'customer' : CustomerInfo,
   'gstNumber' : string,
+  'discountAmount' : bigint,
   'orderDate' : bigint,
   'gstAmount' : bigint,
   'orderId' : bigint,
@@ -83,12 +110,14 @@ export interface InvoiceData {
 }
 export interface Order {
   'id' : bigint,
+  'couponCode' : [] | [string],
   'paymentStatus' : PaymentStatus,
   'paymentMethod' : PaymentMethod,
   'codSurcharge' : bigint,
   'customer' : CustomerInfo,
   'orderStatus' : OrderStatus,
   'userId' : [] | [Principal],
+  'discountAmount' : bigint,
   'createdAt' : bigint,
   'gstAmount' : bigint,
   'razorpayOrderId' : [] | [string],
@@ -98,6 +127,7 @@ export interface Order {
 }
 export type OrderId = bigint;
 export interface OrderInput {
+  'couponCode' : [] | [string],
   'paymentMethod' : PaymentMethod,
   'customer' : CustomerInfo,
   'razorpayOrderId' : [] | [string],
@@ -130,12 +160,12 @@ export interface Product {
   'category' : ProductCategory,
   'isNew' : boolean,
   'price' : bigint,
-  'image1' : [] | [ExternalBlob],
-  'image2' : [] | [ExternalBlob],
-  'image3' : [] | [ExternalBlob],
-  'image4' : [] | [ExternalBlob],
-  'image5' : [] | [ExternalBlob],
-  'image6' : [] | [ExternalBlob],
+  'image1' : [] | [string],
+  'image2' : [] | [string],
+  'image3' : [] | [string],
+  'image4' : [] | [string],
+  'image5' : [] | [string],
+  'image6' : [] | [string],
 }
 export type ProductCategory = { 'Skincare' : null } |
   { 'Haircare' : null } |
@@ -150,12 +180,12 @@ export interface ProductInput {
   'category' : ProductCategory,
   'isNew' : boolean,
   'price' : bigint,
-  'image1' : [] | [ExternalBlob],
-  'image2' : [] | [ExternalBlob],
-  'image3' : [] | [ExternalBlob],
-  'image4' : [] | [ExternalBlob],
-  'image5' : [] | [ExternalBlob],
-  'image6' : [] | [ExternalBlob],
+  'image1' : [] | [string],
+  'image2' : [] | [string],
+  'image3' : [] | [string],
+  'image4' : [] | [string],
+  'image5' : [] | [string],
+  'image6' : [] | [string],
 }
 export interface ProductRating {
   'productId' : bigint,
@@ -225,18 +255,89 @@ export interface _SERVICE {
   '_immutableObjectStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControl' : ActorMethod<[], undefined>,
   'addAddress' : ActorMethod<[Address], boolean>,
-  'adminAddBanner' : ActorMethod<[string, ExternalBlob], Banner>,
-  'adminCreateBlogPost' : ActorMethod<[BlogInput], BlogPost>,
-  'adminCreateProduct' : ActorMethod<[ProductInput], Product>,
-  'adminDeleteBanner' : ActorMethod<[bigint], boolean>,
-  'adminDeleteBlogPost' : ActorMethod<[BlogId], boolean>,
-  'adminDeleteProduct' : ActorMethod<[ProductId], boolean>,
-  'adminGetAnalytics' : ActorMethod<[], Array<DailyAnalytics>>,
-  'adminListAllBlogPosts' : ActorMethod<[], Array<BlogPost>>,
-  'adminListAllOrders' : ActorMethod<[], Array<Order>>,
-  'adminUpdateBlogPost' : ActorMethod<[BlogId, BlogInput], [] | [BlogPost]>,
-  'adminUpdateOrderStatus' : ActorMethod<[OrderId, OrderStatus], boolean>,
-  'adminUpdateProduct' : ActorMethod<[ProductId, ProductInput], boolean>,
+  'adminAddBanner' : ActorMethod<
+    [string, string, string],
+    { 'ok' : Banner } |
+      { 'err' : string }
+  >,
+  'adminCreateBlogPost' : ActorMethod<
+    [string, BlogInput],
+    { 'ok' : BlogPost } |
+      { 'err' : string }
+  >,
+  'adminCreateCoupon' : ActorMethod<
+    [string, CouponInput],
+    { 'ok' : Coupon } |
+      { 'err' : string }
+  >,
+  'adminCreateProduct' : ActorMethod<
+    [string, ProductInput],
+    { 'ok' : Product } |
+      { 'err' : string }
+  >,
+  'adminDeleteBanner' : ActorMethod<
+    [string, bigint],
+    { 'ok' : boolean } |
+      { 'err' : string }
+  >,
+  'adminDeleteBlogPost' : ActorMethod<
+    [string, BlogId],
+    { 'ok' : boolean } |
+      { 'err' : string }
+  >,
+  'adminDeleteCoupon' : ActorMethod<
+    [string, bigint],
+    { 'ok' : boolean } |
+      { 'err' : string }
+  >,
+  'adminDeleteProduct' : ActorMethod<
+    [string, ProductId],
+    { 'ok' : boolean } |
+      { 'err' : string }
+  >,
+  'adminGetAnalytics' : ActorMethod<
+    [string],
+    { 'ok' : Array<DailyAnalytics> } |
+      { 'err' : string }
+  >,
+  'adminListAllBlogPosts' : ActorMethod<
+    [string],
+    { 'ok' : Array<BlogPost> } |
+      { 'err' : string }
+  >,
+  'adminListAllOrders' : ActorMethod<
+    [string],
+    { 'ok' : Array<Order> } |
+      { 'err' : string }
+  >,
+  'adminListCoupons' : ActorMethod<
+    [string],
+    { 'ok' : Array<Coupon> } |
+      { 'err' : string }
+  >,
+  'adminLogin' : ActorMethod<[string], { 'ok' : string } | { 'err' : string }>,
+  'adminLogout' : ActorMethod<[string], undefined>,
+  'adminUpdateBlogPost' : ActorMethod<
+    [string, BlogId, BlogInput],
+    { 'ok' : [] | [BlogPost] } |
+      { 'err' : string }
+  >,
+  'adminUpdateCoupon' : ActorMethod<
+    [string, bigint, CouponInput],
+    { 'ok' : boolean } |
+      { 'err' : string }
+  >,
+  'adminUpdateOrderStatus' : ActorMethod<
+    [string, OrderId, OrderStatus],
+    { 'ok' : boolean } |
+      { 'err' : string }
+  >,
+  'adminUpdateProduct' : ActorMethod<
+    [string, ProductId, ProductInput],
+    { 'ok' : boolean } |
+      { 'err' : string }
+  >,
+  'adminVerifyToken' : ActorMethod<[string], boolean>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'chatbotQuery' : ActorMethod<[string], string>,
   'createOrder' : ActorMethod<[OrderInput], Order>,
@@ -285,6 +386,7 @@ export interface _SERVICE {
     [OrderId, PaymentStatus, [] | [string]],
     boolean
   >,
+  'validateCoupon' : ActorMethod<[string, bigint], CouponValidationResult>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

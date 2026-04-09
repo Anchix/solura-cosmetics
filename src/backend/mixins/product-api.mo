@@ -1,18 +1,22 @@
 import List "mo:core/List";
-import Runtime "mo:core/Runtime";
-import AccessControl "mo:caffeineai-authorization/access-control";
-import Storage "mo:caffeineai-object-storage/Storage";
 import ProductTypes "../types/product";
 import CommonTypes "../types/common";
 import ProductLib "../lib/product";
 
 mixin (
-  accessControlState : AccessControl.AccessControlState,
+  adminSession : { var token : ?Text },
   products : List.List<ProductTypes.Product>,
   banners : List.List<ProductTypes.Banner>,
   nextProductId : { var value : Nat },
   nextBannerId : { var value : Nat },
 ) {
+  private func verifyProductAdminToken(token : Text) : Bool {
+    switch (adminSession.token) {
+      case (?t) { t == token };
+      case null { false };
+    };
+  };
+
   public query func listProducts() : async [ProductTypes.Product] {
     ProductLib.listProducts(products);
   };
@@ -37,46 +41,46 @@ mixin (
     ProductLib.getByCategory(products, category);
   };
 
-  public shared ({ caller }) func adminCreateProduct(input : ProductTypes.ProductInput) : async ProductTypes.Product {
-    if (not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Only admins can create products");
+  public func adminCreateProduct(token : Text, input : ProductTypes.ProductInput) : async { #ok : ProductTypes.Product; #err : Text } {
+    if (not verifyProductAdminToken(token)) {
+      return #err("Unauthorized: Invalid or expired admin session");
     };
     let id = nextProductId.value;
     nextProductId.value += 1;
-    ProductLib.createProduct(products, id, input);
+    #ok(ProductLib.createProduct(products, id, input))
   };
 
-  public shared ({ caller }) func adminUpdateProduct(id : CommonTypes.ProductId, input : ProductTypes.ProductInput) : async Bool {
-    if (not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Only admins can update products");
+  public func adminUpdateProduct(token : Text, id : CommonTypes.ProductId, input : ProductTypes.ProductInput) : async { #ok : Bool; #err : Text } {
+    if (not verifyProductAdminToken(token)) {
+      return #err("Unauthorized: Invalid or expired admin session");
     };
-    ProductLib.updateProduct(products, id, input);
+    #ok(ProductLib.updateProduct(products, id, input))
   };
 
-  public shared ({ caller }) func adminDeleteProduct(id : CommonTypes.ProductId) : async Bool {
-    if (not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Only admins can delete products");
+  public func adminDeleteProduct(token : Text, id : CommonTypes.ProductId) : async { #ok : Bool; #err : Text } {
+    if (not verifyProductAdminToken(token)) {
+      return #err("Unauthorized: Invalid or expired admin session");
     };
-    ProductLib.deleteProduct(products, id);
+    #ok(ProductLib.deleteProduct(products, id))
   };
 
   public query func listBanners() : async [ProductTypes.Banner] {
     ProductLib.listBanners(banners);
   };
 
-  public shared ({ caller }) func adminAddBanner(name : Text, image : Storage.ExternalBlob) : async ProductTypes.Banner {
-    if (not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Only admins can add banners");
+  public func adminAddBanner(token : Text, name : Text, imageUrl : Text) : async { #ok : ProductTypes.Banner; #err : Text } {
+    if (not verifyProductAdminToken(token)) {
+      return #err("Unauthorized: Invalid or expired admin session");
     };
     let id = nextBannerId.value;
     nextBannerId.value += 1;
-    ProductLib.addBanner(banners, id, name, image);
+    #ok(ProductLib.addBannerUrl(banners, id, name, imageUrl))
   };
 
-  public shared ({ caller }) func adminDeleteBanner(id : Nat) : async Bool {
-    if (not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Only admins can delete banners");
+  public func adminDeleteBanner(token : Text, id : Nat) : async { #ok : Bool; #err : Text } {
+    if (not verifyProductAdminToken(token)) {
+      return #err("Unauthorized: Invalid or expired admin session");
     };
-    ProductLib.deleteBanner(banners, id);
+    #ok(ProductLib.deleteBanner(banners, id))
   };
 };

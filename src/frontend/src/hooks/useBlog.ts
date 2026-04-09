@@ -1,10 +1,11 @@
-import { BlogStatus as BackendBlogStatus, createActor } from "@/backend";
+import { BlogStatus as BackendBlogStatus } from "@/backend";
 import type {
   BlogInput as BackendBlogInput,
   BlogPost as BackendBlogPost,
 } from "@/backend";
+import { useSharedActor } from "@/context/ActorContext";
+import { useAuthStore } from "@/store/authStore";
 import type { BlogInput, BlogPost } from "@/types";
-import { useActor } from "@caffeineai/core-infrastructure";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 // ─── Data mapping ─────────────────────────────────────────────────────────────
@@ -17,7 +18,7 @@ function mapBlogPost(post: BackendBlogPost): BlogPost {
     excerpt: post.excerpt,
     author: post.author,
     category: post.category,
-    coverImage: post.coverImage ? post.coverImage.getDirectURL() : undefined,
+    coverImage: post.coverImage ?? undefined,
     status: post.status === BackendBlogStatus.published ? "published" : "draft",
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,
@@ -37,14 +38,14 @@ function toBlogInput(input: BlogInput): BackendBlogInput {
         ? BackendBlogStatus.published
         : BackendBlogStatus.draft,
     slug: input.slug,
-    coverImage: input.coverImage ? undefined : undefined, // URL-based images handled separately
+    coverImage: input.coverImage ?? undefined,
   };
 }
 
 // ─── Public hooks ─────────────────────────────────────────────────────────────
 
 export function useListBlogPosts() {
-  const { actor, isFetching } = useActor(createActor);
+  const { actor, isFetching } = useSharedActor();
   return useQuery<BlogPost[]>({
     queryKey: ["blog", "published"],
     queryFn: async () => {
@@ -57,7 +58,7 @@ export function useListBlogPosts() {
 }
 
 export function useGetBlogPost(id: bigint) {
-  const { actor, isFetching } = useActor(createActor);
+  const { actor, isFetching } = useSharedActor();
   return useQuery<BlogPost | null>({
     queryKey: ["blog", "post", id.toString()],
     queryFn: async () => {
@@ -72,61 +73,92 @@ export function useGetBlogPost(id: bigint) {
 // ─── Admin hooks ──────────────────────────────────────────────────────────────
 
 export function useAdminListAllBlogPosts() {
-  const { actor, isFetching } = useActor(createActor);
+  const { actor, isFetching } = useSharedActor();
+  const { adminToken } = useAuthStore();
   return useQuery<BlogPost[]>({
     queryKey: ["admin", "blog"],
     queryFn: async () => {
-      if (!actor) return [];
-      const posts = await actor.adminListAllBlogPosts();
-      return posts.map(mapBlogPost);
+      if (!actor || !adminToken) return [];
+      const result = await actor.adminListAllBlogPosts(adminToken);
+      if (result.__kind__ === "err") throw new Error(result.err);
+      return result.ok.map(mapBlogPost);
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching && !!adminToken,
   });
 }
 
 export function useAdminCreateBlogPost() {
-  const { actor } = useActor(createActor);
+  const { actor } = useSharedActor();
+  const { adminToken } = useAuthStore();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: BlogInput) => {
       if (!actor) throw new Error("Actor not ready");
-      const post = await actor.adminCreateBlogPost(toBlogInput(input));
-      return mapBlogPost(post);
+      if (!adminToken)
+        throw new Error("Not authenticated as admin. Please log in again.");
+      const result = await actor.adminCreateBlogPost(
+        adminToken,
+        toBlogInput(input),
+      );
+      if (result.__kind__ === "err") throw new Error(result.err);
+      return mapBlogPost(result.ok);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["blog"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "blog"] });
+    },
+    onError: (err) => {
+      console.error("Create blog post failed:", err);
     },
   });
 }
 
 export function useAdminUpdateBlogPost() {
-  const { actor } = useActor(createActor);
+  const { actor } = useSharedActor();
+  const { adminToken } = useAuthStore();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, input }: { id: bigint; input: BlogInput }) => {
       if (!actor) throw new Error("Actor not ready");
-      const post = await actor.adminUpdateBlogPost(id, toBlogInput(input));
-      return post ? mapBlogPost(post) : null;
+      if (!adminToken)
+        throw new Error("Not authenticated as admin. Please log in again.");
+      const result = await actor.adminUpdateBlogPost(
+        adminToken,
+        id,
+        toBlogInput(input),
+      );
+      if (result.__kind__ === "err") throw new Error(result.err);
+      return result.ok ? mapBlogPost(result.ok) : null;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["blog"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "blog"] });
+    },
+    onError: (err) => {
+      console.error("Update blog post failed:", err);
     },
   });
 }
 
 export function useAdminDeleteBlogPost() {
-  const { actor } = useActor(createActor);
+  const { actor } = useSharedActor();
+  const { adminToken } = useAuthStore();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: bigint) => {
       if (!actor) throw new Error("Actor not ready");
-      return actor.adminDeleteBlogPost(id);
+      if (!adminToken)
+        throw new Error("Not authenticated as admin. Please log in again.");
+      const result = await actor.adminDeleteBlogPost(adminToken, id);
+      if (result.__kind__ === "err") throw new Error(result.err);
+      return result.ok;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["blog"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "blog"] });
+    },
+    onError: (err) => {
+      console.error("Delete blog post failed:", err);
     },
   });
 }

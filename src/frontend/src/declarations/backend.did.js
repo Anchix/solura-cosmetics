@@ -27,12 +27,11 @@ export const Address = IDL.Record({
   'state' : IDL.Text,
   'pincode' : IDL.Text,
 });
-export const ExternalBlob = IDL.Vec(IDL.Nat8);
 export const Banner = IDL.Record({
   'id' : IDL.Nat,
   'name' : IDL.Text,
   'createdAt' : IDL.Int,
-  'image' : ExternalBlob,
+  'imageUrl' : IDL.Text,
 });
 export const BlogStatus = IDL.Variant({
   'published' : IDL.Null,
@@ -44,7 +43,7 @@ export const BlogInput = IDL.Record({
   'content' : IDL.Text,
   'slug' : IDL.Text,
   'author' : IDL.Text,
-  'coverImage' : IDL.Opt(ExternalBlob),
+  'coverImage' : IDL.Opt(IDL.Text),
   'excerpt' : IDL.Text,
   'category' : IDL.Text,
 });
@@ -57,10 +56,35 @@ export const BlogPost = IDL.Record({
   'createdAt' : IDL.Int,
   'slug' : IDL.Text,
   'author' : IDL.Text,
-  'coverImage' : IDL.Opt(ExternalBlob),
+  'coverImage' : IDL.Opt(IDL.Text),
   'updatedAt' : IDL.Int,
   'excerpt' : IDL.Text,
   'category' : IDL.Text,
+});
+export const DiscountType = IDL.Variant({
+  'Fixed' : IDL.Null,
+  'Percentage' : IDL.Null,
+});
+export const CouponInput = IDL.Record({
+  'discountValue' : IDL.Nat,
+  'expiryDate' : IDL.Opt(IDL.Int),
+  'code' : IDL.Text,
+  'discountType' : DiscountType,
+  'isActive' : IDL.Bool,
+  'minOrderAmount' : IDL.Opt(IDL.Nat),
+  'maxUses' : IDL.Opt(IDL.Nat),
+});
+export const Coupon = IDL.Record({
+  'id' : IDL.Nat,
+  'discountValue' : IDL.Nat,
+  'expiryDate' : IDL.Opt(IDL.Int),
+  'code' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'discountType' : DiscountType,
+  'usedCount' : IDL.Nat,
+  'isActive' : IDL.Bool,
+  'minOrderAmount' : IDL.Opt(IDL.Nat),
+  'maxUses' : IDL.Opt(IDL.Nat),
 });
 export const ProductStatus = IDL.Variant({
   'active' : IDL.Null,
@@ -80,12 +104,12 @@ export const ProductInput = IDL.Record({
   'category' : ProductCategory,
   'isNew' : IDL.Bool,
   'price' : IDL.Nat,
-  'image1' : IDL.Opt(ExternalBlob),
-  'image2' : IDL.Opt(ExternalBlob),
-  'image3' : IDL.Opt(ExternalBlob),
-  'image4' : IDL.Opt(ExternalBlob),
-  'image5' : IDL.Opt(ExternalBlob),
-  'image6' : IDL.Opt(ExternalBlob),
+  'image1' : IDL.Opt(IDL.Text),
+  'image2' : IDL.Opt(IDL.Text),
+  'image3' : IDL.Opt(IDL.Text),
+  'image4' : IDL.Opt(IDL.Text),
+  'image5' : IDL.Opt(IDL.Text),
+  'image6' : IDL.Opt(IDL.Text),
 });
 export const Product = IDL.Record({
   'id' : IDL.Nat,
@@ -98,12 +122,12 @@ export const Product = IDL.Record({
   'category' : ProductCategory,
   'isNew' : IDL.Bool,
   'price' : IDL.Nat,
-  'image1' : IDL.Opt(ExternalBlob),
-  'image2' : IDL.Opt(ExternalBlob),
-  'image3' : IDL.Opt(ExternalBlob),
-  'image4' : IDL.Opt(ExternalBlob),
-  'image5' : IDL.Opt(ExternalBlob),
-  'image6' : IDL.Opt(ExternalBlob),
+  'image1' : IDL.Opt(IDL.Text),
+  'image2' : IDL.Opt(IDL.Text),
+  'image3' : IDL.Opt(IDL.Text),
+  'image4' : IDL.Opt(IDL.Text),
+  'image5' : IDL.Opt(IDL.Text),
+  'image6' : IDL.Opt(IDL.Text),
 });
 export const ProductId = IDL.Nat;
 export const DailyAnalytics = IDL.Record({
@@ -145,12 +169,14 @@ export const OrderItem = IDL.Record({
 });
 export const Order = IDL.Record({
   'id' : IDL.Nat,
+  'couponCode' : IDL.Opt(IDL.Text),
   'paymentStatus' : PaymentStatus,
   'paymentMethod' : PaymentMethod,
   'codSurcharge' : IDL.Nat,
   'customer' : CustomerInfo,
   'orderStatus' : OrderStatus,
   'userId' : IDL.Opt(IDL.Principal),
+  'discountAmount' : IDL.Nat,
   'createdAt' : IDL.Int,
   'gstAmount' : IDL.Nat,
   'razorpayOrderId' : IDL.Opt(IDL.Text),
@@ -165,11 +191,13 @@ export const UserRole = IDL.Variant({
   'guest' : IDL.Null,
 });
 export const OrderInput = IDL.Record({
+  'couponCode' : IDL.Opt(IDL.Text),
   'paymentMethod' : PaymentMethod,
   'customer' : CustomerInfo,
   'razorpayOrderId' : IDL.Opt(IDL.Text),
   'items' : IDL.Vec(OrderItem),
 });
+export const ExternalBlob = IDL.Vec(IDL.Nat8);
 export const ReviewInput = IDL.Record({
   'text' : IDL.Text,
   'productId' : IDL.Nat,
@@ -197,11 +225,13 @@ export const UserProfile = IDL.Record({
   'phone' : IDL.Text,
 });
 export const InvoiceData = IDL.Record({
+  'couponCode' : IDL.Opt(IDL.Text),
   'paymentStatus' : PaymentStatus,
   'paymentMethod' : PaymentMethod,
   'codSurcharge' : IDL.Nat,
   'customer' : CustomerInfo,
   'gstNumber' : IDL.Text,
+  'discountAmount' : IDL.Nat,
   'orderDate' : IDL.Int,
   'gstAmount' : IDL.Nat,
   'orderId' : IDL.Nat,
@@ -215,6 +245,10 @@ export const ProductRating = IDL.Record({
   'productId' : IDL.Nat,
   'averageRating' : IDL.Nat,
   'reviewCount' : IDL.Nat,
+});
+export const CouponValidationResult = IDL.Variant({
+  'Invalid' : IDL.Text,
+  'Valid' : IDL.Record({ 'discountAmount' : IDL.Nat, 'coupon' : Coupon }),
 });
 
 export const idlService = IDL.Service({
@@ -246,22 +280,93 @@ export const idlService = IDL.Service({
   '_immutableObjectStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   '_initializeAccessControl' : IDL.Func([], [], []),
   'addAddress' : IDL.Func([Address], [IDL.Bool], []),
-  'adminAddBanner' : IDL.Func([IDL.Text, ExternalBlob], [Banner], []),
-  'adminCreateBlogPost' : IDL.Func([BlogInput], [BlogPost], []),
-  'adminCreateProduct' : IDL.Func([ProductInput], [Product], []),
-  'adminDeleteBanner' : IDL.Func([IDL.Nat], [IDL.Bool], []),
-  'adminDeleteBlogPost' : IDL.Func([BlogId], [IDL.Bool], []),
-  'adminDeleteProduct' : IDL.Func([ProductId], [IDL.Bool], []),
-  'adminGetAnalytics' : IDL.Func([], [IDL.Vec(DailyAnalytics)], ['query']),
-  'adminListAllBlogPosts' : IDL.Func([], [IDL.Vec(BlogPost)], []),
-  'adminListAllOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
-  'adminUpdateBlogPost' : IDL.Func(
-      [BlogId, BlogInput],
-      [IDL.Opt(BlogPost)],
+  'adminAddBanner' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Variant({ 'ok' : Banner, 'err' : IDL.Text })],
       [],
     ),
-  'adminUpdateOrderStatus' : IDL.Func([OrderId, OrderStatus], [IDL.Bool], []),
-  'adminUpdateProduct' : IDL.Func([ProductId, ProductInput], [IDL.Bool], []),
+  'adminCreateBlogPost' : IDL.Func(
+      [IDL.Text, BlogInput],
+      [IDL.Variant({ 'ok' : BlogPost, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminCreateCoupon' : IDL.Func(
+      [IDL.Text, CouponInput],
+      [IDL.Variant({ 'ok' : Coupon, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminCreateProduct' : IDL.Func(
+      [IDL.Text, ProductInput],
+      [IDL.Variant({ 'ok' : Product, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminDeleteBanner' : IDL.Func(
+      [IDL.Text, IDL.Nat],
+      [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminDeleteBlogPost' : IDL.Func(
+      [IDL.Text, BlogId],
+      [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminDeleteCoupon' : IDL.Func(
+      [IDL.Text, IDL.Nat],
+      [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminDeleteProduct' : IDL.Func(
+      [IDL.Text, ProductId],
+      [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminGetAnalytics' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Vec(DailyAnalytics), 'err' : IDL.Text })],
+      [],
+    ),
+  'adminListAllBlogPosts' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Vec(BlogPost), 'err' : IDL.Text })],
+      [],
+    ),
+  'adminListAllOrders' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Vec(Order), 'err' : IDL.Text })],
+      [],
+    ),
+  'adminListCoupons' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Vec(Coupon), 'err' : IDL.Text })],
+      [],
+    ),
+  'adminLogin' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminLogout' : IDL.Func([IDL.Text], [], []),
+  'adminUpdateBlogPost' : IDL.Func(
+      [IDL.Text, BlogId, BlogInput],
+      [IDL.Variant({ 'ok' : IDL.Opt(BlogPost), 'err' : IDL.Text })],
+      [],
+    ),
+  'adminUpdateCoupon' : IDL.Func(
+      [IDL.Text, IDL.Nat, CouponInput],
+      [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminUpdateOrderStatus' : IDL.Func(
+      [IDL.Text, OrderId, OrderStatus],
+      [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminUpdateProduct' : IDL.Func(
+      [IDL.Text, ProductId, ProductInput],
+      [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminVerifyToken' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'chatbotQuery' : IDL.Func([IDL.Text], [IDL.Text], []),
   'createOrder' : IDL.Func([OrderInput], [Order], []),
@@ -326,6 +431,11 @@ export const idlService = IDL.Service({
       [IDL.Bool],
       [],
     ),
+  'validateCoupon' : IDL.Func(
+      [IDL.Text, IDL.Nat],
+      [CouponValidationResult],
+      ['query'],
+    ),
 });
 
 export const idlInitArgs = [];
@@ -350,12 +460,11 @@ export const idlFactory = ({ IDL }) => {
     'state' : IDL.Text,
     'pincode' : IDL.Text,
   });
-  const ExternalBlob = IDL.Vec(IDL.Nat8);
   const Banner = IDL.Record({
     'id' : IDL.Nat,
     'name' : IDL.Text,
     'createdAt' : IDL.Int,
-    'image' : ExternalBlob,
+    'imageUrl' : IDL.Text,
   });
   const BlogStatus = IDL.Variant({
     'published' : IDL.Null,
@@ -367,7 +476,7 @@ export const idlFactory = ({ IDL }) => {
     'content' : IDL.Text,
     'slug' : IDL.Text,
     'author' : IDL.Text,
-    'coverImage' : IDL.Opt(ExternalBlob),
+    'coverImage' : IDL.Opt(IDL.Text),
     'excerpt' : IDL.Text,
     'category' : IDL.Text,
   });
@@ -380,10 +489,35 @@ export const idlFactory = ({ IDL }) => {
     'createdAt' : IDL.Int,
     'slug' : IDL.Text,
     'author' : IDL.Text,
-    'coverImage' : IDL.Opt(ExternalBlob),
+    'coverImage' : IDL.Opt(IDL.Text),
     'updatedAt' : IDL.Int,
     'excerpt' : IDL.Text,
     'category' : IDL.Text,
+  });
+  const DiscountType = IDL.Variant({
+    'Fixed' : IDL.Null,
+    'Percentage' : IDL.Null,
+  });
+  const CouponInput = IDL.Record({
+    'discountValue' : IDL.Nat,
+    'expiryDate' : IDL.Opt(IDL.Int),
+    'code' : IDL.Text,
+    'discountType' : DiscountType,
+    'isActive' : IDL.Bool,
+    'minOrderAmount' : IDL.Opt(IDL.Nat),
+    'maxUses' : IDL.Opt(IDL.Nat),
+  });
+  const Coupon = IDL.Record({
+    'id' : IDL.Nat,
+    'discountValue' : IDL.Nat,
+    'expiryDate' : IDL.Opt(IDL.Int),
+    'code' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'discountType' : DiscountType,
+    'usedCount' : IDL.Nat,
+    'isActive' : IDL.Bool,
+    'minOrderAmount' : IDL.Opt(IDL.Nat),
+    'maxUses' : IDL.Opt(IDL.Nat),
   });
   const ProductStatus = IDL.Variant({
     'active' : IDL.Null,
@@ -403,12 +537,12 @@ export const idlFactory = ({ IDL }) => {
     'category' : ProductCategory,
     'isNew' : IDL.Bool,
     'price' : IDL.Nat,
-    'image1' : IDL.Opt(ExternalBlob),
-    'image2' : IDL.Opt(ExternalBlob),
-    'image3' : IDL.Opt(ExternalBlob),
-    'image4' : IDL.Opt(ExternalBlob),
-    'image5' : IDL.Opt(ExternalBlob),
-    'image6' : IDL.Opt(ExternalBlob),
+    'image1' : IDL.Opt(IDL.Text),
+    'image2' : IDL.Opt(IDL.Text),
+    'image3' : IDL.Opt(IDL.Text),
+    'image4' : IDL.Opt(IDL.Text),
+    'image5' : IDL.Opt(IDL.Text),
+    'image6' : IDL.Opt(IDL.Text),
   });
   const Product = IDL.Record({
     'id' : IDL.Nat,
@@ -421,12 +555,12 @@ export const idlFactory = ({ IDL }) => {
     'category' : ProductCategory,
     'isNew' : IDL.Bool,
     'price' : IDL.Nat,
-    'image1' : IDL.Opt(ExternalBlob),
-    'image2' : IDL.Opt(ExternalBlob),
-    'image3' : IDL.Opt(ExternalBlob),
-    'image4' : IDL.Opt(ExternalBlob),
-    'image5' : IDL.Opt(ExternalBlob),
-    'image6' : IDL.Opt(ExternalBlob),
+    'image1' : IDL.Opt(IDL.Text),
+    'image2' : IDL.Opt(IDL.Text),
+    'image3' : IDL.Opt(IDL.Text),
+    'image4' : IDL.Opt(IDL.Text),
+    'image5' : IDL.Opt(IDL.Text),
+    'image6' : IDL.Opt(IDL.Text),
   });
   const ProductId = IDL.Nat;
   const DailyAnalytics = IDL.Record({
@@ -468,12 +602,14 @@ export const idlFactory = ({ IDL }) => {
   });
   const Order = IDL.Record({
     'id' : IDL.Nat,
+    'couponCode' : IDL.Opt(IDL.Text),
     'paymentStatus' : PaymentStatus,
     'paymentMethod' : PaymentMethod,
     'codSurcharge' : IDL.Nat,
     'customer' : CustomerInfo,
     'orderStatus' : OrderStatus,
     'userId' : IDL.Opt(IDL.Principal),
+    'discountAmount' : IDL.Nat,
     'createdAt' : IDL.Int,
     'gstAmount' : IDL.Nat,
     'razorpayOrderId' : IDL.Opt(IDL.Text),
@@ -488,11 +624,13 @@ export const idlFactory = ({ IDL }) => {
     'guest' : IDL.Null,
   });
   const OrderInput = IDL.Record({
+    'couponCode' : IDL.Opt(IDL.Text),
     'paymentMethod' : PaymentMethod,
     'customer' : CustomerInfo,
     'razorpayOrderId' : IDL.Opt(IDL.Text),
     'items' : IDL.Vec(OrderItem),
   });
+  const ExternalBlob = IDL.Vec(IDL.Nat8);
   const ReviewInput = IDL.Record({
     'text' : IDL.Text,
     'productId' : IDL.Nat,
@@ -520,11 +658,13 @@ export const idlFactory = ({ IDL }) => {
     'phone' : IDL.Text,
   });
   const InvoiceData = IDL.Record({
+    'couponCode' : IDL.Opt(IDL.Text),
     'paymentStatus' : PaymentStatus,
     'paymentMethod' : PaymentMethod,
     'codSurcharge' : IDL.Nat,
     'customer' : CustomerInfo,
     'gstNumber' : IDL.Text,
+    'discountAmount' : IDL.Nat,
     'orderDate' : IDL.Int,
     'gstAmount' : IDL.Nat,
     'orderId' : IDL.Nat,
@@ -538,6 +678,10 @@ export const idlFactory = ({ IDL }) => {
     'productId' : IDL.Nat,
     'averageRating' : IDL.Nat,
     'reviewCount' : IDL.Nat,
+  });
+  const CouponValidationResult = IDL.Variant({
+    'Invalid' : IDL.Text,
+    'Valid' : IDL.Record({ 'discountAmount' : IDL.Nat, 'coupon' : Coupon }),
   });
   
   return IDL.Service({
@@ -569,22 +713,93 @@ export const idlFactory = ({ IDL }) => {
     '_immutableObjectStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     '_initializeAccessControl' : IDL.Func([], [], []),
     'addAddress' : IDL.Func([Address], [IDL.Bool], []),
-    'adminAddBanner' : IDL.Func([IDL.Text, ExternalBlob], [Banner], []),
-    'adminCreateBlogPost' : IDL.Func([BlogInput], [BlogPost], []),
-    'adminCreateProduct' : IDL.Func([ProductInput], [Product], []),
-    'adminDeleteBanner' : IDL.Func([IDL.Nat], [IDL.Bool], []),
-    'adminDeleteBlogPost' : IDL.Func([BlogId], [IDL.Bool], []),
-    'adminDeleteProduct' : IDL.Func([ProductId], [IDL.Bool], []),
-    'adminGetAnalytics' : IDL.Func([], [IDL.Vec(DailyAnalytics)], ['query']),
-    'adminListAllBlogPosts' : IDL.Func([], [IDL.Vec(BlogPost)], []),
-    'adminListAllOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
-    'adminUpdateBlogPost' : IDL.Func(
-        [BlogId, BlogInput],
-        [IDL.Opt(BlogPost)],
+    'adminAddBanner' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Variant({ 'ok' : Banner, 'err' : IDL.Text })],
         [],
       ),
-    'adminUpdateOrderStatus' : IDL.Func([OrderId, OrderStatus], [IDL.Bool], []),
-    'adminUpdateProduct' : IDL.Func([ProductId, ProductInput], [IDL.Bool], []),
+    'adminCreateBlogPost' : IDL.Func(
+        [IDL.Text, BlogInput],
+        [IDL.Variant({ 'ok' : BlogPost, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminCreateCoupon' : IDL.Func(
+        [IDL.Text, CouponInput],
+        [IDL.Variant({ 'ok' : Coupon, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminCreateProduct' : IDL.Func(
+        [IDL.Text, ProductInput],
+        [IDL.Variant({ 'ok' : Product, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminDeleteBanner' : IDL.Func(
+        [IDL.Text, IDL.Nat],
+        [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminDeleteBlogPost' : IDL.Func(
+        [IDL.Text, BlogId],
+        [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminDeleteCoupon' : IDL.Func(
+        [IDL.Text, IDL.Nat],
+        [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminDeleteProduct' : IDL.Func(
+        [IDL.Text, ProductId],
+        [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminGetAnalytics' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Vec(DailyAnalytics), 'err' : IDL.Text })],
+        [],
+      ),
+    'adminListAllBlogPosts' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Vec(BlogPost), 'err' : IDL.Text })],
+        [],
+      ),
+    'adminListAllOrders' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Vec(Order), 'err' : IDL.Text })],
+        [],
+      ),
+    'adminListCoupons' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Vec(Coupon), 'err' : IDL.Text })],
+        [],
+      ),
+    'adminLogin' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminLogout' : IDL.Func([IDL.Text], [], []),
+    'adminUpdateBlogPost' : IDL.Func(
+        [IDL.Text, BlogId, BlogInput],
+        [IDL.Variant({ 'ok' : IDL.Opt(BlogPost), 'err' : IDL.Text })],
+        [],
+      ),
+    'adminUpdateCoupon' : IDL.Func(
+        [IDL.Text, IDL.Nat, CouponInput],
+        [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminUpdateOrderStatus' : IDL.Func(
+        [IDL.Text, OrderId, OrderStatus],
+        [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminUpdateProduct' : IDL.Func(
+        [IDL.Text, ProductId, ProductInput],
+        [IDL.Variant({ 'ok' : IDL.Bool, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminVerifyToken' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'chatbotQuery' : IDL.Func([IDL.Text], [IDL.Text], []),
     'createOrder' : IDL.Func([OrderInput], [Order], []),
@@ -652,6 +867,11 @@ export const idlFactory = ({ IDL }) => {
         [OrderId, PaymentStatus, IDL.Opt(IDL.Text)],
         [IDL.Bool],
         [],
+      ),
+    'validateCoupon' : IDL.Func(
+        [IDL.Text, IDL.Nat],
+        [CouponValidationResult],
+        ['query'],
       ),
   });
 };

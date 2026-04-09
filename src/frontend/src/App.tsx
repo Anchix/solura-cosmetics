@@ -23,6 +23,7 @@ const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
 const AdminProductsPage = lazy(() => import("@/pages/AdminProductsPage"));
 const AdminOrdersPage = lazy(() => import("@/pages/AdminOrdersPage"));
 const AdminBlogPage = lazy(() => import("@/pages/AdminBlogPage"));
+const AdminCouponsPage = lazy(() => import("@/pages/AdminCouponsPage"));
 const BlogPage = lazy(() => import("@/pages/BlogPage"));
 const BlogDetailPage = lazy(() => import("@/pages/BlogDetailPage"));
 const HelpPage = lazy(() => import("@/pages/HelpPage"));
@@ -178,6 +179,15 @@ const adminBlogRoute = createRoute({
     </Suspense>
   ),
 });
+const adminCouponsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/coupons",
+  component: () => (
+    <Suspense fallback={<PageLoader />}>
+      <AdminCouponsPage />
+    </Suspense>
+  ),
+});
 const blogRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/blog",
@@ -275,6 +285,7 @@ const routeTree = rootRoute.addChildren([
   adminProductsRoute,
   adminOrdersRoute,
   adminBlogRoute,
+  adminCouponsRoute,
   blogRoute,
   blogDetailRoute,
   helpRoute,

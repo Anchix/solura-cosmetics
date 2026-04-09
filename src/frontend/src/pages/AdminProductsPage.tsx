@@ -10,11 +10,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAdminProducts } from "@/hooks/useProducts";
+import {
+  useAdminCreateProduct,
+  useAdminDeleteProduct,
+  useAdminProducts,
+  useAdminUpdateProduct,
+} from "@/hooks/useProducts";
 import { useAuthStore } from "@/store/authStore";
 import type { Banner, Product, ProductCategory } from "@/types";
 import { useNavigate } from "@tanstack/react-router";
-import { ImagePlus, Pencil, Plus, Trash2, Upload, X } from "lucide-react";
+import { ImagePlus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -56,57 +61,49 @@ const MOCK_BANNERS: Banner[] = [
   },
 ];
 
-// ─── Image Upload Slot ────────────────────────────────────────────────────────
+// ─── Image URL Input ──────────────────────────────────────────────────────────
 
-interface ImageSlotProps {
-  url: string | undefined;
+interface ImageUrlInputProps {
+  url: string;
   index: number;
-  onUpload: (index: number, url: string) => void;
-  onRemove: (index: number) => void;
+  onChange: (index: number, url: string) => void;
+  onClear: (index: number) => void;
 }
 
-function ImageSlot({ url, index, onUpload, onRemove }: ImageSlotProps) {
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    // Simulate object-storage upload — in production use ExternalBlob
-    const objectUrl = URL.createObjectURL(file);
-    onUpload(index, objectUrl);
-    toast.success(`Image ${index + 1} uploaded`);
-  };
-
+function ImageUrlInput({ url, index, onChange, onClear }: ImageUrlInputProps) {
   return (
-    <div className="relative h-20 w-20 rounded-xl border-2 border-dashed border-border bg-muted/20 overflow-hidden group hover:border-primary/50 transition-smooth flex-shrink-0">
-      {url ? (
-        <>
-          <img src={url} alt="" className="w-full h-full object-cover" />
-          <button
-            type="button"
-            onClick={() => onRemove(index)}
-            className="absolute top-1 right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-smooth"
-            aria-label="Remove image"
-          >
-            <X className="h-3 w-3" />
-          </button>
-          <div className="absolute bottom-1 left-1 bg-background/80 text-foreground rounded px-1 text-[9px] font-mono">
-            {index + 1}
-          </div>
-        </>
-      ) : (
-        <label
-          className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-muted-foreground hover:text-primary transition-colors"
-          data-ocid={`admin-product-image-slot-${index}`}
-        >
-          <Upload className="h-4 w-4 mb-1" />
-          <span className="text-[9px] font-body">Slot {index + 1}</span>
-          <input
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            onChange={handleFileChange}
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Input
+            value={url}
+            onChange={(e) => onChange(index, e.target.value)}
+            placeholder="/assets/images/your-product.jpg  or  https://..."
+            className="pr-8 text-xs"
+            data-ocid={`admin-product-image-url-${index}`}
           />
-        </label>
-      )}
+          {url && (
+            <button
+              type="button"
+              onClick={() => onClear(index)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={`Clear image ${index + 1} URL`}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        {url && (
+          <img
+            src={url}
+            alt={`Preview ${index + 1}`}
+            className="h-10 w-10 rounded-lg object-cover bg-muted/30 flex-shrink-0 border border-border"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -118,6 +115,7 @@ interface ProductDialogProps {
   onClose: () => void;
   product: Partial<Product>;
   isEditing: boolean;
+  isSaving: boolean;
   onChange: (p: Partial<Product>) => void;
   onSave: () => void;
 }
@@ -127,21 +125,26 @@ function ProductDialog({
   onClose,
   product,
   isEditing,
+  isSaving,
   onChange,
   onSave,
 }: ProductDialogProps) {
-  const images = product.images ?? [];
+  // Ensure images is always a 6-element string array
+  const images: string[] = Array.from(
+    { length: 6 },
+    (_, i) => product.images?.[i] ?? "",
+  );
 
-  const handleImageUpload = (index: number, url: string) => {
+  const handleImageChange = (index: number, url: string) => {
     const updated = [...images];
     updated[index] = url;
     onChange({ ...product, images: updated });
   };
 
-  const handleImageRemove = (index: number) => {
+  const handleImageClear = (index: number) => {
     const updated = [...images];
     updated[index] = "";
-    onChange({ ...product, images: updated.filter(Boolean) });
+    onChange({ ...product, images: updated });
   };
 
   return (
@@ -152,7 +155,8 @@ function ProductDialog({
             {isEditing ? "Edit Product" : "Add New Product"}
           </DialogTitle>
           <DialogDescription>
-            Fill in the details below. Up to 6 product images can be uploaded.
+            Fill in the details below. Paste image URLs (Google Drive or direct
+            links) for up to 6 product images.
           </DialogDescription>
         </DialogHeader>
         <div className="grid sm:grid-cols-2 gap-4 mt-4">
@@ -161,7 +165,7 @@ function ProductDialog({
             <Input
               value={product.name ?? ""}
               onChange={(e) => onChange({ ...product, name: e.target.value })}
-              placeholder="Kumkumadi Radiance Serum"
+              placeholder="Solura Whitening Cream"
               data-ocid="admin-product-name"
             />
           </div>
@@ -181,7 +185,6 @@ function ProductDialog({
               <option value="skincare">Skincare</option>
               <option value="makeup">Makeup</option>
               <option value="haircare">Haircare</option>
-              <option value="bath-body">Bath &amp; Body</option>
             </select>
           </div>
           <div className="space-y-2">
@@ -227,7 +230,7 @@ function ProductDialog({
               onChange={(e) =>
                 onChange({ ...product, shortDescription: e.target.value })
               }
-              placeholder="Saffron & 16-herb brightening serum"
+              placeholder="Advanced brightening formula for radiant skin"
               data-ocid="admin-product-short-desc"
             />
           </div>
@@ -245,23 +248,36 @@ function ProductDialog({
             />
           </div>
 
-          {/* 6-slot image upload */}
+          {/* 6-slot image URL inputs */}
           <div className="sm:col-span-2 space-y-3">
-            <Label>Product Images (up to 6)</Label>
-            <div className="flex flex-wrap gap-3">
-              {Array.from({ length: 6 }, (_, i) => i).map((i) => (
-                <ImageSlot
-                  key={i}
-                  index={i}
-                  url={images[i]}
-                  onUpload={handleImageUpload}
-                  onRemove={handleImageRemove}
-                />
-              ))}
+            <div>
+              <Label>Product Images (up to 6)</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Paste a direct image URL or a local path like{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-[10px] font-mono">
+                  /assets/images/your-image.jpg
+                </code>{" "}
+                for uploaded images. Image 1 is the primary thumbnail.
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Click a slot to upload. Slot 1 is the primary thumbnail.
-            </p>
+            <div className="space-y-2">
+              {(["img1", "img2", "img3", "img4", "img5", "img6"] as const).map(
+                (slot, i) => (
+                  <div key={slot} className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground font-mono w-14 flex-shrink-0">
+                      Image {i + 1}
+                      {i === 0 ? " *" : ""}
+                    </span>
+                    <ImageUrlInput
+                      index={i}
+                      url={images[i]}
+                      onChange={handleImageChange}
+                      onClear={handleImageClear}
+                    />
+                  </div>
+                ),
+              )}
+            </div>
           </div>
 
           <div className="sm:col-span-2 flex flex-wrap gap-4">
@@ -304,8 +320,16 @@ function ProductDialog({
           >
             Cancel
           </Button>
-          <Button onClick={onSave} data-ocid="admin-product-save">
-            {isEditing ? "Update Product" : "Add Product"}
+          <Button
+            onClick={onSave}
+            data-ocid="admin-product-save"
+            disabled={isSaving}
+          >
+            {isSaving
+              ? "Saving…"
+              : isEditing
+                ? "Update Product"
+                : "Add Product"}
           </Button>
         </div>
       </DialogContent>
@@ -473,6 +497,9 @@ export default function AdminProductsPage() {
   const { isAdmin } = useAuthStore();
   const navigate = useNavigate();
   const { data: products, isLoading } = useAdminProducts();
+  const createMutation = useAdminCreateProduct();
+  const updateMutation = useAdminUpdateProduct();
+  const deleteMutation = useAdminDeleteProduct();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editProduct, setEditProduct] =
     useState<Partial<Product>>(EMPTY_PRODUCT);
@@ -491,14 +518,39 @@ export default function AdminProductsPage() {
       p.category.toLowerCase().includes(search.toLowerCase()),
   );
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editProduct.name || !editProduct.price) {
-      toast.error("Name and price are required.");
+      toast.error("Product name and price are required.");
       return;
     }
-    toast.success(isEditing ? "Product updated!" : "Product added!");
-    setDialogOpen(false);
-    setEditProduct(EMPTY_PRODUCT);
+    const images = editProduct.images ?? [];
+    if (!images[0]) {
+      toast.error(
+        "At least one product image URL is required. Please paste an image URL in Image 1.",
+      );
+      return;
+    }
+    try {
+      if (isEditing && editProduct.id) {
+        await updateMutation.mutateAsync({
+          id: editProduct.id,
+          product: editProduct,
+        });
+        toast.success("Product updated successfully!");
+      } else {
+        await createMutation.mutateAsync(editProduct);
+        toast.success("Product added successfully!");
+      }
+      setDialogOpen(false);
+      setEditProduct(EMPTY_PRODUCT);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      toast.error(
+        isEditing
+          ? `Failed to update product. ${msg || "Please check all fields and try again."}`
+          : `Failed to add product. ${msg || "Please check all fields and try again."}`,
+      );
+    }
   };
 
   const handleEdit = (product: Product) => {
@@ -513,15 +565,40 @@ export default function AdminProductsPage() {
     setDialogOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
-    toast.success(`"${deleteTarget.name}" deleted`);
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success(`"${deleteTarget.name}" deleted`);
+    } catch {
+      toast.error("Failed to delete product.");
+    }
     setDeleteTarget(null);
   };
 
   return (
     <AdminLayout title="Products">
       <div className="space-y-8">
+        {/* Admin note */}
+        <div
+          className="bg-primary/5 border border-primary/20 rounded-xl px-5 py-4 text-sm text-foreground space-y-1"
+          data-ocid="admin-products-note"
+        >
+          <p className="font-semibold text-primary">
+            💡 Managing Products & Images
+          </p>
+          <p className="text-muted-foreground">
+            All product details — name, price, description, and images — can be
+            edited at any time from this panel. To update a product image, click
+            the <strong>Edit</strong> button on any product row and paste a new
+            image URL in the Image fields. You can also use local paths like{" "}
+            <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">
+              /assets/images/your-image.jpg
+            </code>{" "}
+            for images uploaded to the site.
+          </p>
+        </div>
+
         {/* Products section */}
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-4">
@@ -675,6 +752,7 @@ export default function AdminProductsPage() {
         onClose={() => setDialogOpen(false)}
         product={editProduct}
         isEditing={isEditing}
+        isSaving={createMutation.isPending || updateMutation.isPending}
         onChange={setEditProduct}
         onSave={handleSave}
       />

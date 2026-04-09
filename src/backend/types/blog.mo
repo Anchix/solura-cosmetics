@@ -1,5 +1,3 @@
-import Storage "mo:caffeineai-object-storage/Storage";
-
 module {
   public type BlogId = Nat;
 
@@ -15,7 +13,7 @@ module {
     excerpt : Text;
     author : Text;
     category : Text;
-    coverImage : ?Storage.ExternalBlob;
+    coverImage : ?Text;
     status : BlogStatus;
     createdAt : Int;
     updatedAt : Int;
@@ -28,7 +26,7 @@ module {
     excerpt : Text;
     author : Text;
     category : Text;
-    coverImage : ?Storage.ExternalBlob;
+    coverImage : ?Text;
     status : BlogStatus;
     slug : Text;
   };
