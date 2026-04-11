@@ -1,15 +1,12 @@
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "@tanstack/react-router";
-import { LogOut, Package } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 
-// 🔥 FIREBASE IMPORTS
+// ✅ FIREBASE IMPORTS
 import { auth } from "@/firebase/config";
-import {
-  onAuthStateChanged,
-  signOut,
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 export default function AccountPage() {
   const navigate = useNavigate();
@@ -17,7 +14,7 @@ export default function AccountPage() {
   const [user, setUser] = useState<any>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // 🔥 Listen for Firebase user
+  // 🔥 Listen to auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
@@ -35,52 +32,35 @@ export default function AccountPage() {
     return () => unsubscribe();
   }, []);
 
-  // 🔥 Redirect if not logged in
-  useEffect(() => {
-    if (!isLoggedIn) {
-      navigate({ to: "/auth" });
-    }
-  }, [isLoggedIn, navigate]);
-
   // 🔥 Logout
   const handleLogout = async () => {
     await signOut(auth);
     navigate({ to: "/" });
   };
 
-  if (!isLoggedIn) return null;
-
   return (
     <Layout>
-      <div className="bg-muted/30 min-h-screen">
-        <div className="container mx-auto px-4 py-10 max-w-3xl">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold">My Account</h1>
-              <p className="text-sm text-muted-foreground">
-                Welcome back, {user?.name}
+      <div className="min-h-[80vh] flex items-center justify-center px-4">
+        <div className="w-full max-w-md bg-white border rounded-xl p-8 shadow">
+          <h1 className="text-2xl font-bold mb-4">My Account</h1>
+
+          {isLoggedIn && user ? (
+            <>
+              <p className="mb-2">
+                <strong>Name:</strong> {user.name}
               </p>
-            </div>
+              <p className="mb-6">
+                <strong>Email:</strong> {user.email}
+              </p>
 
-            <Button onClick={handleLogout} variant="outline">
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
-
-          {/* User Card */}
-          <div className="bg-white rounded-xl border p-6 shadow">
-            <h2 className="text-xl font-semibold mb-2">{user?.name}</h2>
-            <p className="text-muted-foreground">{user?.email}</p>
-
-            <div className="mt-6">
-              <Button onClick={() => navigate({ to: "/account/orders" })}>
-                <Package className="h-4 w-4 mr-2" />
-                View Orders
+              <Button onClick={handleLogout} className="w-full">
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
               </Button>
-            </div>
-          </div>
+            </>
+          ) : (
+            <p>You are not logged in.</p>
+          )}
         </div>
       </div>
     </Layout>
