@@ -9,7 +9,7 @@ import { auth } from "../firebase/config";
 import {
   GoogleAuthProvider,
   signInWithPopup,
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+} from "firebase/auth";
 
 export default function AuthPage() {
   const navigate = useNavigate();
