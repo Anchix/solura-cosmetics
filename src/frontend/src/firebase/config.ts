@@ -14,3 +14,4 @@ const app = initializeApp(firebaseConfig);
 
 // ✅ ONLY DATABASE (NO AUTH)
 export const db = getFirestore(app);
+
