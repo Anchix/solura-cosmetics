@@ -5,8 +5,9 @@ import { LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 
 // ✅ FIREBASE IMPORTS
-import { auth } from "@/firebase/config";
+import { auth, db } from "@/firebase/config";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 
 export default function AccountPage() {
   const navigate = useNavigate();
@@ -14,14 +15,20 @@ export default function AccountPage() {
   const [user, setUser] = useState<any>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // 🔥 Listen to auth state
+  // 🔥 Listen + SAVE USER
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        setUser({
+        const userData = {
           name: firebaseUser.displayName || "User",
           email: firebaseUser.email,
-        });
+          uid: firebaseUser.uid,
+        };
+
+        // ✅ SAVE USER IN FIRESTORE
+        await setDoc(doc(db, "users", firebaseUser.uid), userData);
+
+        setUser(userData);
         setIsLoggedIn(true);
       } else {
         setUser(null);
