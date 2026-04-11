@@ -61,13 +61,18 @@ export default function Layout({ children, fullWidth = false }: LayoutProps) {
       >
         <div className="container mx-auto px-4 flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
-            <span className="font-display text-2xl font-bold text-foreground tracking-tight">
-              Solura
-            </span>
-            <span className="text-xs text-muted-foreground font-body hidden sm:block tracking-widest uppercase mt-1">
-              Cosmetics
-            </span>
+          <Link
+            to="/"
+            className="flex items-center group"
+            aria-label="Solura Cosmetics — Home"
+          >
+            <img
+              src="/assets/logo.jpg"
+              alt="Solura Cosmetics"
+              className="h-12 w-auto object-contain"
+              style={{ mixBlendMode: "multiply" }}
+              loading="eager"
+            />
           </Link>
 
           {/* Desktop nav */}
@@ -150,8 +155,13 @@ export default function Layout({ children, fullWidth = false }: LayoutProps) {
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] bg-card">
                 <div className="flex flex-col gap-1 mt-8">
-                  <div className="font-display text-xl font-bold mb-4 text-foreground">
-                    Solura Cosmetics
+                  <div className="flex items-center mb-4">
+                    <img
+                      src="/assets/logo.jpg"
+                      alt="Solura Cosmetics"
+                      className="h-10 w-auto object-contain"
+                      style={{ mixBlendMode: "multiply" }}
+                    />
                   </div>
                   {NAV_LINKS.map((link) => (
                     <Link

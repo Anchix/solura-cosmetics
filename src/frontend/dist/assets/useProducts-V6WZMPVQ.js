@@ -1,57 +1,36 @@
-import {
-  ProductCategory as BackendProductCategory,
-  ProductStatus,
-} from "@/backend";
-import type {
-  Banner as BackendBanner,
-  Product as BackendProduct,
-  ProductInput as BackendProductInput,
-} from "@/backend";
-import { useSharedActor } from "@/context/ActorContext";
-import { useAuthStore } from "@/store/authStore";
-import type { CanisterBanner, Product, ProductCategory } from "@/types";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-
-// ─── Data mapping ─────────────────────────────────────────────────────────────
-
-function mapCategory(cat: BackendProductCategory): ProductCategory {
+import { h as useSharedActor, k as useQuery, l as useQueryClient, P as ProductStatus, m as ProductCategory } from "./index-DBS95maA.js";
+import { u as useAuthStore } from "./sheet-Bi-Q7ojW.js";
+import { u as useMutation } from "./useMutation-C725G2l4.js";
+function mapCategory(cat) {
   switch (cat) {
-    case BackendProductCategory.Skincare:
+    case ProductCategory.Skincare:
       return "skincare";
-    case BackendProductCategory.Makeup:
+    case ProductCategory.Makeup:
       return "makeup";
-    case BackendProductCategory.Haircare:
+    case ProductCategory.Haircare:
       return "haircare";
     default:
       return "skincare";
   }
 }
-
-function toBackendCategory(cat: string): BackendProductCategory {
+function toBackendCategory(cat) {
   switch (cat.toLowerCase()) {
     case "makeup":
-      return BackendProductCategory.Makeup;
+      return ProductCategory.Makeup;
     case "haircare":
-      return BackendProductCategory.Haircare;
+      return ProductCategory.Haircare;
     default:
-      return BackendProductCategory.Skincare;
+      return ProductCategory.Skincare;
   }
 }
-
-function extractImages(p: BackendProduct): string[] {
-  return [p.image1, p.image2, p.image3, p.image4, p.image5, p.image6]
-    .filter((url): url is string => !!url?.trim())
-    .map((url) => url.trim());
+function extractImages(p) {
+  return [p.image1, p.image2, p.image3, p.image4, p.image5, p.image6].filter((url) => !!(url == null ? void 0 : url.trim())).map((url) => url.trim());
 }
-
-function mapProduct(p: BackendProduct): Product {
+function mapProduct(p) {
   return {
     id: p.id.toString(),
     name: p.name,
-    slug: p.name
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, ""),
+    slug: p.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
     category: mapCategory(p.category),
     price: Number(p.price),
     description: p.description,
@@ -65,16 +44,14 @@ function mapProduct(p: BackendProduct): Product {
     isNew: p.isNew,
     isLowStock: p.stock > 0n && p.stock <= 10n,
     tags: [],
-    createdAt: new Date(Number(p.createdAt / 1_000_000n)).toISOString(),
-    updatedAt: new Date(Number(p.createdAt / 1_000_000n)).toISOString(),
+    createdAt: new Date(Number(p.createdAt / 1000000n)).toISOString(),
+    updatedAt: new Date(Number(p.createdAt / 1000000n)).toISOString()
   };
 }
-
-function toImageUrl(url: string | undefined): string | undefined {
-  return url?.trim() || undefined;
+function toImageUrl(url) {
+  return (url == null ? void 0 : url.trim()) || void 0;
 }
-
-function toProductInput(product: Partial<Product>): BackendProductInput {
+function toProductInput(product) {
   const imgs = (product.images ?? []).slice(0, 6);
   return {
     name: product.name ?? "",
@@ -84,64 +61,55 @@ function toProductInput(product: Partial<Product>): BackendProductInput {
     category: toBackendCategory(product.category ?? "skincare"),
     isBestseller: product.isBestseller ?? false,
     isNew: product.isNew ?? false,
-    status:
-      product.inStock !== false ? ProductStatus.active : ProductStatus.inactive,
+    status: product.inStock !== false ? ProductStatus.active : ProductStatus.inactive,
     image1: toImageUrl(imgs[0]),
     image2: toImageUrl(imgs[1]),
     image3: toImageUrl(imgs[2]),
     image4: toImageUrl(imgs[3]),
     image5: toImageUrl(imgs[4]),
-    image6: toImageUrl(imgs[5]),
+    image6: toImageUrl(imgs[5])
   };
 }
-
-function parseBigInt(id: string): bigint {
+function parseBigInt(id) {
   const num = Number(id);
   return Number.isNaN(num) ? 0n : BigInt(num);
 }
-
-// ─── Banner mapping ───────────────────────────────────────────────────────────
-
-function mapBanner(b: BackendBanner): CanisterBanner {
-  // Name field may encode title|subtitle using "|" as separator
+function mapBanner(b) {
+  var _a, _b;
   const parts = b.name.split("|");
-  const title = parts[0]?.trim() ?? b.name;
-  const subtitle = parts[1]?.trim() ?? "";
+  const title = ((_a = parts[0]) == null ? void 0 : _a.trim()) ?? b.name;
+  const subtitle = ((_b = parts[1]) == null ? void 0 : _b.trim()) ?? "";
   return {
     id: b.id.toString(),
     name: b.name,
     title,
     subtitle,
     imageUrl: b.imageUrl,
-    createdAt: Number(b.createdAt / 1_000_000n),
+    createdAt: Number(b.createdAt / 1000000n)
   };
 }
-
-// ─── Public hooks ─────────────────────────────────────────────────────────────
-
-export function useProducts(category?: ProductCategory) {
+function useProducts(category) {
   const { actor, isFetching } = useSharedActor();
-  return useQuery<Product[]>({
+  return useQuery({
     queryKey: ["products", category ?? "all"],
     queryFn: async () => {
       if (!actor) return [];
-      let results: BackendProduct[];
+      let results;
       if (category) {
         results = await actor.getProductsByCategory(
-          toBackendCategory(category),
+          toBackendCategory(category)
         );
       } else {
         results = await actor.listActiveProducts();
       }
       return results.map(mapProduct);
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching
   });
 }
-
-export function useProduct(id: string) {
+function useProduct(id) {
   const { actor, isFetching } = useSharedActor();
-  return useQuery<Product | null>({
+  return useQuery({
     queryKey: ["product", id],
     queryFn: async () => {
       if (!actor || !id) return null;
@@ -153,45 +121,38 @@ export function useProduct(id: string) {
       const all = await actor.listActiveProducts();
       const slug = id.toLowerCase();
       const match = all.find(
-        (p) =>
-          p.name
-            .toLowerCase()
-            .replace(/\s+/g, "-")
-            .replace(/[^a-z0-9-]/g, "") === slug,
+        (p) => p.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") === slug
       );
       return match ? mapProduct(match) : null;
     },
-    enabled: !!actor && !isFetching && !!id,
+    enabled: !!actor && !isFetching && !!id
   });
 }
-
-export function useBestsellers() {
+function useBestsellers() {
   const { actor, isFetching } = useSharedActor();
-  return useQuery<Product[]>({
+  return useQuery({
     queryKey: ["products", "bestsellers"],
     queryFn: async () => {
       if (!actor) return [];
       const results = await actor.getBestsellers();
       return results.map(mapProduct);
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching
   });
 }
-
-export function useNewArrivals() {
+function useNewArrivals() {
   const { actor, isFetching } = useSharedActor();
-  return useQuery<Product[]>({
+  return useQuery({
     queryKey: ["products", "new-arrivals"],
     queryFn: async () => {
       if (!actor) return [];
       const results = await actor.getNewArrivals();
       return results.map(mapProduct);
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching
   });
 }
-
-export function useProductReviews(productId: string) {
+function useProductReviews(productId) {
   const { actor, isFetching } = useSharedActor();
   return useQuery({
     queryKey: ["reviews", productId],
@@ -208,69 +169,53 @@ export function useProductReviews(productId: string) {
         rating: Number(r.rating),
         title: "",
         body: r.text,
-        images: [r.image1, r.image2, r.image3]
-          .filter(Boolean)
-          .map((img) => img!.getDirectURL()),
+        images: [r.image1, r.image2, r.image3].filter(Boolean).map((img) => img.getDirectURL()),
         verified: true,
-        createdAt: new Date(Number(r.createdAt / 1_000_000n)).toISOString(),
+        createdAt: new Date(Number(r.createdAt / 1000000n)).toISOString()
       }));
     },
-    enabled: !!actor && !isFetching && !!productId,
+    enabled: !!actor && !isFetching && !!productId
   });
 }
-
-export function useSubmitReview() {
+function useSubmitReview() {
   const { actor } = useSharedActor();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       productId,
       rating,
-      body,
-    }: {
-      productId: string;
-      userId: string;
-      userName: string;
-      rating: number;
-      title: string;
-      body: string;
-      images: string[];
-      verified: boolean;
+      body
     }) => {
       if (!actor) throw new Error("Actor not ready");
       const numId = parseBigInt(productId);
       return actor.createReview({
         productId: numId,
         rating: BigInt(rating),
-        text: body,
+        text: body
       });
     },
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: ["reviews", vars.productId] });
-    },
+    }
   });
 }
-
-// ─── Admin hooks ──────────────────────────────────────────────────────────────
-
-export function useAdminProducts() {
+function useAdminProducts() {
   const { actor, isFetching } = useSharedActor();
-  return useQuery<Product[]>({
+  return useQuery({
     queryKey: ["admin", "products"],
     queryFn: async () => {
       if (!actor) return [];
       const results = await actor.listProducts();
       return results.map(mapProduct);
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching
   });
 }
-
-export function useAdminCreateProduct() {
+function useAdminCreateProduct() {
   const { actor } = useSharedActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (product: Partial<Product>) => {
+    mutationFn: async (product) => {
       const adminToken = useAuthStore.getState().adminToken;
       if (!actor) throw new Error("Actor not ready");
       if (!adminToken)
@@ -287,18 +232,17 @@ export function useAdminCreateProduct() {
     onError: (err) => {
       console.error("Create product failed:", err);
       queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
-    },
+    }
   });
 }
-
-export function useAdminUpdateProduct() {
+function useAdminUpdateProduct() {
   const { actor } = useSharedActor();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       id,
-      product,
-    }: { id: string; product: Partial<Product> }) => {
+      product
+    }) => {
       const adminToken = useAuthStore.getState().adminToken;
       if (!actor) throw new Error("Actor not ready");
       if (!adminToken)
@@ -317,15 +261,14 @@ export function useAdminUpdateProduct() {
     onError: (err) => {
       console.error("Update product failed:", err);
       queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
-    },
+    }
   });
 }
-
-export function useAdminDeleteProduct() {
+function useAdminDeleteProduct() {
   const { actor } = useSharedActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id) => {
       const adminToken = useAuthStore.getState().adminToken;
       if (!actor) throw new Error("Actor not ready");
       if (!adminToken)
@@ -338,34 +281,29 @@ export function useAdminDeleteProduct() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
-    },
+    }
   });
 }
-
-// ─── Banner hooks ─────────────────────────────────────────────────────────────
-
-export function useBanners() {
+function useBanners() {
   const { actor, isFetching } = useSharedActor();
-  return useQuery<CanisterBanner[]>({
+  return useQuery({
     queryKey: ["banners"],
     queryFn: async () => {
       if (!actor) return [];
       const results = await actor.listBanners();
       return results.map(mapBanner);
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching
   });
 }
-
-export function useAdminAddBanner() {
+function useAdminAddBanner() {
   const { actor } = useSharedActor();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       name,
-      imageUrl,
-    }: { name: string; imageUrl: string }) => {
-      // Always read fresh from store — closed-over value may be stale at render time
+      imageUrl
+    }) => {
       const token = useAuthStore.getState().adminToken;
       if (!actor) throw new Error("Actor not ready");
       if (!token) throw new Error("No admin session — please log in again.");
@@ -375,16 +313,14 @@ export function useAdminAddBanner() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["banners"] });
-    },
+    }
   });
 }
-
-export function useAdminDeleteBanner() {
+function useAdminDeleteBanner() {
   const { actor } = useSharedActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      // Always read fresh from store — closed-over value may be stale at render time
+    mutationFn: async (id) => {
       const token = useAuthStore.getState().adminToken;
       if (!actor) throw new Error("Actor not ready");
       if (!token) throw new Error("No admin session — please log in again.");
@@ -395,6 +331,21 @@ export function useAdminDeleteBanner() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["banners"] });
-    },
+    }
   });
 }
+export {
+  useBestsellers as a,
+  useNewArrivals as b,
+  useProducts as c,
+  useProduct as d,
+  useProductReviews as e,
+  useSubmitReview as f,
+  useAdminProducts as g,
+  useAdminCreateProduct as h,
+  useAdminUpdateProduct as i,
+  useAdminDeleteProduct as j,
+  useAdminAddBanner as k,
+  useAdminDeleteBanner as l,
+  useBanners as u
+};

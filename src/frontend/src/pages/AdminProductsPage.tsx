@@ -11,15 +11,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  useAdminAddBanner,
   useAdminCreateProduct,
+  useAdminDeleteBanner,
   useAdminDeleteProduct,
   useAdminProducts,
   useAdminUpdateProduct,
+  useBanners,
 } from "@/hooks/useProducts";
 import { useAuthStore } from "@/store/authStore";
-import type { Banner, Product, ProductCategory } from "@/types";
+import type { Product, ProductCategory } from "@/types";
 import { useNavigate } from "@tanstack/react-router";
-import { ImagePlus, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ImagePlus, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -37,29 +40,6 @@ const EMPTY_PRODUCT: Partial<Product> = {
   isLowStock: false,
   tags: [],
 };
-
-const MOCK_BANNERS: Banner[] = [
-  {
-    id: "b1",
-    title: "Unlock Your Eternal Glow",
-    subtitle: "Discover South Indian Beauty Secrets",
-    image: "/assets/generated/hero-banner.dim_1400x600.jpg",
-    ctaText: "Shop the Collection",
-    ctaLink: "/shop",
-    isActive: true,
-    order: 1,
-  },
-  {
-    id: "b2",
-    title: "New Arrivals — Spring Glow",
-    subtitle: "Fresh botanicals for luminous skin",
-    image: "/assets/generated/hero-product.dim_600x700.jpg",
-    ctaText: "Explore Now",
-    ctaLink: "/shop/skincare",
-    isActive: false,
-    order: 2,
-  },
-];
 
 // ─── Image URL Input ──────────────────────────────────────────────────────────
 
@@ -389,22 +369,54 @@ function DeleteConfirmDialog({
 // ─── Banner Management ────────────────────────────────────────────────────────
 
 function BannerManagement() {
-  const [banners, setBanners] = useState<Banner[]>(MOCK_BANNERS);
+  const { data: banners, isLoading, isError } = useBanners();
+  const addBanner = useAdminAddBanner();
+  const deleteBanner = useAdminDeleteBanner();
 
-  const handleDeleteBanner = (id: string) => {
-    setBanners((prev) => prev.filter((b) => b.id !== id));
-    toast.success("Banner removed");
+  const [showForm, setShowForm] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newSubtitle, setNewSubtitle] = useState("");
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  const handleAdd = async () => {
+    if (!newTitle.trim()) {
+      toast.error("Please enter a banner headline.");
+      return;
+    }
+    if (!newImageUrl.trim()) {
+      toast.error("Please enter an image URL for the banner.");
+      return;
+    }
+    // Encode title|subtitle in the name field (subtitle is optional)
+    const encodedName = newSubtitle.trim()
+      ? `${newTitle.trim()}|${newSubtitle.trim()}`
+      : newTitle.trim();
+    try {
+      await addBanner.mutateAsync({
+        name: encodedName,
+        imageUrl: newImageUrl.trim(),
+      });
+      toast.success("Banner added! It will appear in the hero slider.");
+      setNewTitle("");
+      setNewSubtitle("");
+      setNewImageUrl("");
+      setShowForm(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      toast.error(`Failed to add banner. ${msg}`);
+    }
   };
 
-  const handleToggle = (id: string) => {
-    setBanners((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, isActive: !b.isActive } : b)),
-    );
-    toast.success("Banner status updated");
-  };
-
-  const handleUpload = () => {
-    toast.info("Connect object-storage to upload banner images");
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteBanner.mutateAsync(id);
+      toast.success("Banner removed from the slider.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      toast.error(`Failed to delete banner. ${msg}`);
+    }
+    setDeleteTarget(null);
   };
 
   return (
@@ -412,81 +424,219 @@ function BannerManagement() {
       <div className="flex items-center justify-between px-6 py-4 border-b border-border">
         <div>
           <h2 className="font-display text-base font-semibold text-foreground">
-            Banner Management
+            Hero Slider Banners
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Manage homepage banners and promotional images
+            Add image banners that appear in the homepage hero slider. Each
+            banner shows your image as a full background with your headline over
+            it.
           </p>
         </div>
         <Button
           size="sm"
-          variant="outline"
           className="gap-2"
-          onClick={handleUpload}
-          data-ocid="admin-banner-upload"
+          onClick={() => setShowForm((v) => !v)}
+          data-ocid="admin-banner-add-toggle"
         >
-          <ImagePlus className="h-4 w-4" />
-          Upload Banner
+          {showForm ? (
+            <X className="h-4 w-4" />
+          ) : (
+            <ImagePlus className="h-4 w-4" />
+          )}
+          {showForm ? "Cancel" : "Add Banner"}
         </Button>
       </div>
-      <div className="divide-y divide-border">
-        {banners.map((banner) => (
-          <div
-            key={banner.id}
-            className="flex items-center gap-4 px-6 py-4 hover:bg-muted/20 transition-colors"
-            data-ocid={`admin-banner-row-${banner.id}`}
-          >
-            <img
-              src={banner.image}
-              alt={banner.title}
-              className="h-14 w-24 rounded-lg object-cover bg-muted/30 flex-shrink-0"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">
-                {banner.title}
-              </p>
-              <p className="text-xs text-muted-foreground truncate">
-                {banner.subtitle}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                CTA: {banner.ctaText} → {banner.ctaLink}
-              </p>
+
+      {/* Add banner form */}
+      {showForm && (
+        <div className="px-6 py-4 bg-muted/20 border-b border-border space-y-3">
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="banner-title">Headline *</Label>
+              <Input
+                id="banner-title"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="e.g. Reveal Your Natural Glow"
+                data-ocid="admin-banner-name-input"
+              />
             </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => handleToggle(banner.id)}
-                className={`relative inline-flex h-5 w-9 rounded-full transition-colors ${
-                  banner.isActive ? "bg-primary" : "bg-muted-foreground/30"
-                }`}
-                aria-label={banner.isActive ? "Deactivate" : "Activate"}
-                data-ocid={`admin-banner-toggle-${banner.id}`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 rounded-full bg-card shadow transform transition-transform top-0.5 absolute ${
-                    banner.isActive ? "translate-x-4" : "translate-x-0.5"
-                  }`}
-                />
-              </button>
-              <span
-                className={`text-xs ${banner.isActive ? "text-primary" : "text-muted-foreground"}`}
-              >
-                {banner.isActive ? "Active" : "Inactive"}
-              </span>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={() => handleDeleteBanner(banner.id)}
-                aria-label="Delete banner"
-                data-ocid={`admin-banner-delete-${banner.id}`}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+            <div className="space-y-1.5">
+              <Label htmlFor="banner-subtitle">
+                Subtitle{" "}
+                <span className="text-muted-foreground font-normal">
+                  (optional)
+                </span>
+              </Label>
+              <Input
+                id="banner-subtitle"
+                value={newSubtitle}
+                onChange={(e) => setNewSubtitle(e.target.value)}
+                placeholder="e.g. Chemical-free skincare for real results"
+                data-ocid="admin-banner-subtitle-input"
+              />
             </div>
           </div>
-        ))}
-      </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="banner-image">Image URL *</Label>
+            <Input
+              id="banner-image"
+              value={newImageUrl}
+              onChange={(e) => setNewImageUrl(e.target.value)}
+              placeholder="https://... or /assets/images/banner.jpg"
+              data-ocid="admin-banner-image-input"
+            />
+          </div>
+          {newImageUrl && (
+            <img
+              src={newImageUrl}
+              alt="Banner preview"
+              className="h-28 w-full rounded-lg object-cover bg-muted/30 border border-border"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          )}
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setShowForm(false);
+                setNewTitle("");
+                setNewSubtitle("");
+                setNewImageUrl("");
+              }}
+              data-ocid="admin-banner-cancel"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleAdd}
+              disabled={addBanner.isPending}
+              data-ocid="admin-banner-save"
+            >
+              {addBanner.isPending ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Add to Slider
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Banner list */}
+      {isLoading ? (
+        <div className="px-6 py-8 flex items-center justify-center gap-2 text-muted-foreground text-sm">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading banners…
+        </div>
+      ) : isError ? (
+        <div
+          className="px-6 py-8 text-center text-sm text-destructive"
+          data-ocid="admin-banners-error"
+        >
+          Failed to load banners. Please refresh the page.
+        </div>
+      ) : !banners || banners.length === 0 ? (
+        <div className="px-6 py-10 text-center" data-ocid="admin-banners-empty">
+          <p className="text-muted-foreground text-sm">No banners added yet.</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            The hero slider will show default product slides until you add
+            banners here.
+          </p>
+        </div>
+      ) : (
+        <div className="divide-y divide-border">
+          {banners.map((banner, idx) => (
+            <div
+              key={banner.id}
+              className="flex items-center gap-4 px-6 py-4 hover:bg-muted/20 transition-colors"
+              data-ocid={`admin-banner-row-${banner.id}`}
+            >
+              <div className="flex-shrink-0 text-xs text-muted-foreground font-mono w-5 text-center">
+                {idx + 1}
+              </div>
+              <img
+                src={
+                  banner.imageUrl ||
+                  "/assets/images/img-20260316-wa0004-019d71db-72fb-75fa-b051-70700f8c04a9.jpg"
+                }
+                alt={banner.title}
+                className="h-16 w-28 rounded-lg object-cover bg-muted/30 flex-shrink-0 border border-border"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src =
+                    "/assets/images/img-20260316-wa0004-019d71db-72fb-75fa-b051-70700f8c04a9.jpg";
+                }}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {banner.title}
+                </p>
+                {banner.subtitle && (
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    {banner.subtitle}
+                  </p>
+                )}
+                {banner.imageUrl && (
+                  <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5 font-mono">
+                    {banner.imageUrl}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {deleteTarget === banner.id ? (
+                  <>
+                    <span className="text-xs text-destructive font-medium">
+                      Delete?
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDelete(banner.id)}
+                      disabled={deleteBanner.isPending}
+                      data-ocid={`admin-banner-confirm-delete-${banner.id}`}
+                    >
+                      {deleteBanner.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        "Yes"
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setDeleteTarget(null)}
+                      data-ocid={`admin-banner-cancel-delete-${banner.id}`}
+                    >
+                      No
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => setDeleteTarget(banner.id)}
+                    aria-label="Delete banner"
+                    data-ocid={`admin-banner-delete-${banner.id}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

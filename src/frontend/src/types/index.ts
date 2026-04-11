@@ -152,6 +152,19 @@ export interface Banner {
   order: number;
 }
 
+/** Banner as returned by the canister (maps to backend Banner type) */
+export interface CanisterBanner {
+  id: string;
+  /** Raw name stored in canister. May contain "|" separator: "Title|Subtitle" */
+  name: string;
+  /** Parsed display title (part before "|" in name, or full name if no "|") */
+  title: string;
+  /** Parsed subtitle (part after "|" in name, or empty string) */
+  subtitle: string;
+  imageUrl: string;
+  createdAt: number;
+}
+
 export interface PincodeData {
   pincode: string;
   district: string;

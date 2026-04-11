@@ -1,3 +1,4 @@
+import HeroSlider from "@/components/HeroSlider";
 import Layout from "@/components/Layout";
 import ProductCard from "@/components/ProductCard";
 import StarRating from "@/components/StarRating";
@@ -843,6 +844,7 @@ export default function HomePage() {
   return (
     <Layout>
       <SaleBanner />
+      <HeroSlider />
       <HeroSection />
       <CategorySection />
       <BestsellerSection />
