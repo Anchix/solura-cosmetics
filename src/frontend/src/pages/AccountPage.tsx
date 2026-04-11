@@ -5,7 +5,7 @@ import { LogOut, Package } from "lucide-react";
 import { useEffect, useState } from "react";
 
 // 🔥 FIREBASE IMPORTS
-import { auth } from "../firebase/config";
+import { auth } from "@/firebase/config";
 import {
   onAuthStateChanged,
   signOut,
