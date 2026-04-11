@@ -5,7 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 // 🔥 FIREBASE
-import { auth } from "../firebase/config";
+import { auth } from "@/firebase/config";
 import {
   GoogleAuthProvider,
   signInWithPopup,
